@@ -172,7 +172,7 @@ mod_dashboard_registry_server <- function(id, dashboard_repo, connect_service,
           columnDefs = list(
             list(
               targets = 6,  # Grade column
-              render = JS("
+              render = htmlwidgets::JS("
                 function(data, type, row) {
                   if (type === 'display') {
                     var color = 'secondary';

@@ -182,7 +182,7 @@ mod_compliance_tracker_server <- function(id, compliance_repo, dashboard_repo,
           columnDefs = list(
             list(
               targets = 3,  # Grade column
-              render = JS("
+              render = htmlwidgets::JS("
                 function(data, type, row) {
                   if (type === 'display' && data) {
                     var color = 'secondary';

@@ -256,6 +256,8 @@ mod_analytics_reporting_server <- function(id, dashboard_repo, user) {
     # Platform chart
     output$platform_chart <- echarts4r::renderEcharts4r({
       req(dashboard_data())
+      req(nrow(dashboard_data()) > 0)
+      req("platform" %in% names(dashboard_data()))
 
       data <- dashboard_data() %>%
         dplyr::count(platform) %>%
@@ -277,6 +279,8 @@ mod_analytics_reporting_server <- function(id, dashboard_repo, user) {
     # Status chart
     output$status_chart <- echarts4r::renderEcharts4r({
       req(dashboard_data())
+      req(nrow(dashboard_data()) > 0)
+      req("status" %in% names(dashboard_data()))
 
       data <- dashboard_data() %>%
         dplyr::count(status) %>%
@@ -295,6 +299,8 @@ mod_analytics_reporting_server <- function(id, dashboard_repo, user) {
     # Deployment timeline
     output$deployment_timeline <- echarts4r::renderEcharts4r({
       req(dashboard_data())
+      req(nrow(dashboard_data()) > 0)
+      req("deployment_date" %in% names(dashboard_data()))
 
       data <- dashboard_data() %>%
         dplyr::filter(!is.na(deployment_date)) %>%
@@ -303,6 +309,8 @@ mod_analytics_reporting_server <- function(id, dashboard_repo, user) {
         ) %>%
         dplyr::count(month) %>%
         dplyr::arrange(month)
+
+      req(nrow(data) > 0)
 
       data %>%
         echarts4r::e_charts(month) %>%
