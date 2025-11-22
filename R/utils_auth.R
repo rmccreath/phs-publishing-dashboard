@@ -16,6 +16,7 @@ get_current_user <- function(session = shiny::getDefaultReactiveDomain()) {
   if (is.null(user)) {
     # Development mode - return mock user
     return(list(
+      user_id = "user-1",
       username = "dev_user",
       email = "dev@phs.scot",
       full_name = "Development User",
@@ -27,6 +28,7 @@ get_current_user <- function(session = shiny::getDefaultReactiveDomain()) {
 
   # Extract user information
   list(
+    user_id = user %||% "unknown",
     username = user %||% "unknown",
     email = paste0(user, "@phs.scot"),
     full_name = user,

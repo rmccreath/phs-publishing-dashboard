@@ -112,11 +112,12 @@ mod_dashboard_registry_server <- function(id, dashboard_repo, connect_service,
 
     # Load dashboards
     dashboards <- reactive({
-      # Trigger on sync button or filter changes
+      # Trigger on sync button, filter changes, or manual refresh
       input$btn_sync
       input$filter_status
       input$filter_platform
       input$filter_team
+      rv$last_sync  # Trigger refresh when this changes
 
       filters <- list()
 

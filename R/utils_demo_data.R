@@ -138,6 +138,31 @@ generate_sample_approvals <- function() {
   )
 }
 
+#' Load demo data from file
+#'
+#' @param file_name File name (dashboards.rds or approvals.rds)
+#' @return Data frame or NULL if file doesn't exist
+#' @noRd
+load_demo_data <- function(file_name) {
+  # Try to load from inst/demo_data
+  demo_file <- system.file("demo_data", file_name, package = "phsgovernance")
+
+  if (file.exists(demo_file)) {
+    message("Loading demo data from: ", demo_file)
+    return(readRDS(demo_file))
+  }
+
+  # Try local path (for development)
+  local_file <- file.path("inst/demo_data", file_name)
+  if (file.exists(local_file)) {
+    message("Loading demo data from: ", local_file)
+    return(readRDS(local_file))
+  }
+
+  message("No saved demo data found, generating fresh data")
+  NULL
+}
+
 #' Mock Dashboard Repository for Demo Mode
 #'
 #' @description In-memory repository that doesn't require a database
@@ -150,7 +175,16 @@ MockDashboardRepository <- R6::R6Class(
 
   public = list(
     initialize = function() {
-      private$data <- generate_sample_dashboards()
+      # Try to load saved demo data first
+      saved_data <- load_demo_data("dashboards.rds")
+
+      if (!is.null(saved_data)) {
+        private$data <- saved_data
+        message("Loaded ", nrow(saved_data), " dashboards from demo data file")
+      } else {
+        private$data <- generate_sample_dashboards()
+        message("Generated ", nrow(private$data), " sample dashboards")
+      }
     },
 
     get_all = function(filters = NULL) {
@@ -257,7 +291,16 @@ MockApprovalRepository <- R6::R6Class(
 
   public = list(
     initialize = function() {
-      private$data <- generate_sample_approvals()
+      # Try to load saved demo data first
+      saved_data <- load_demo_data("approvals.rds")
+
+      if (!is.null(saved_data)) {
+        private$data <- saved_data
+        message("Loaded ", nrow(saved_data), " approvals from demo data file")
+      } else {
+        private$data <- generate_sample_approvals()
+        message("Generated ", nrow(private$data), " sample approvals")
+      }
     },
 
     get_all = function(filters = NULL) {

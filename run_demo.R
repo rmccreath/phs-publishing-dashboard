@@ -26,12 +26,28 @@ if (!requireNamespace("phsgovernance", quietly = TRUE)) {
 # Set demo mode
 Sys.setenv(DEMO_MODE = "true")
 
+# Check if demo data exists, generate if not
+demo_data_dir <- "inst/demo_data"
+dashboards_file <- file.path(demo_data_dir, "dashboards.rds")
+
+if (!file.exists(dashboards_file)) {
+  cat("📊 Generating comprehensive demo data...\n")
+  cat("   This will create realistic sample dashboards and approvals.\n\n")
+
+  if (file.exists("generate_demo_data.R")) {
+    source("generate_demo_data.R")
+  } else {
+    cat("   ⚠️  Demo data generator not found. Using basic sample data.\n\n")
+  }
+}
+
 cat("🚀 Starting application in DEMO MODE...\n")
 cat("\n")
 cat("Features:\n")
-cat("  ✅ Sample dashboards pre-loaded\n")
-cat("  ✅ Mock compliance data\n")
-cat("  ✅ All features accessible\n")
+cat("  ✅ 30 sample dashboards pre-loaded\n")
+cat("  ✅ 15 approval requests (various statuses)\n")
+cat("  ✅ Mock compliance scores and analytics\n")
+cat("  ✅ All features fully functional\n")
 cat("  ℹ️  Data not persisted (resets on restart)\n")
 cat("  ℹ️  API integrations disabled\n")
 cat("\n")
