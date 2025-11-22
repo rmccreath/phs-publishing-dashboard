@@ -3,99 +3,180 @@
 #' @description Functions to generate sample data for demo mode
 #' @noRd
 
-#' Generate sample dashboards
+#' Generate sample products (new workflow)
 #'
-#' @return Data frame of sample dashboards
+#' @return Data frame of sample products
 #' @export
 generate_sample_dashboards <- function() {
+  n <- 25
+
+  # Generate lifecycle stages with realistic distribution
+  lifecycle_stages <- sample(
+    c("approved", "in_development", "in_audit", "deployed", "archived"),
+    n,
+    replace = TRUE,
+    prob = c(0.1, 0.1, 0.15, 0.6, 0.05)
+  )
+
+  # Generate status based on lifecycle stage
+  current_status <- sapply(lifecycle_stages, function(stage) {
+    switch(stage,
+      approved = "awaiting_development",
+      in_development = "in_progress",
+      in_audit = sample(c("audit_in_progress", "audit_review"), 1),
+      deployed = sample(c("active", "review_due", "flagged"), 1, prob = c(0.7, 0.2, 0.1)),
+      archived = "archived"
+    )
+  })
+
   tibble::tibble(
-    dashboard_id = paste0("demo-", 1:20),
-    external_id = paste0("ext-", 1:20),
+    product_id = paste0("prod-", 1:n),
+    dashboard_id = paste0("prod-", 1:n),  # Alias for compatibility
+    external_id = paste0("ext-", 1:n),
     name = c(
       "COVID-19 Weekly Dashboard",
       "Hospital Admissions Monitor",
       "Vaccination Progress Tracker",
       "Mental Health Services Report",
-      "Cancer Waiting Times",
+      "Cancer Waiting Times Dashboard",
       "GP Practice Performance",
       "Emergency Department Monitor",
-      "Prescription Analytics",
+      "Prescription Analytics Portal",
       "Population Health Trends",
       "Staff Wellbeing Dashboard",
       "Quality Improvement Tracker",
-      "Patient Experience Survey",
-      "Mortality Statistics",
+      "Patient Experience Survey Dashboard",
+      "Mortality Statistics Report",
       "Dental Services Overview",
       "Community Care Monitor",
       "Health Inequalities Report",
       "Maternal Health Dashboard",
-      "Chronic Disease Management",
-      "Primary Care Access",
-      "Public Health Campaigns"
+      "Chronic Disease Management Portal",
+      "Primary Care Access Dashboard",
+      "Public Health Campaigns Tracker",
+      "Infection Prevention Dashboard",
+      "Winter Pressures Monitor",
+      "Workforce Planning Tool",
+      "Resource Allocation Dashboard",
+      "Clinical Outcomes Tracker"
     ),
-    description = paste("Sample dashboard for", c(
-      "tracking COVID-19 metrics",
-      "monitoring hospital capacity",
-      "vaccine rollout progress",
-      "mental health service utilization",
-      "cancer treatment pathways",
-      "primary care quality metrics",
-      "A&E department performance",
-      "medication usage patterns",
-      "population health indicators",
-      "staff satisfaction and retention",
-      "quality improvement initiatives",
-      "patient feedback analysis",
-      "mortality trends",
-      "dental service delivery",
-      "community care outcomes",
-      "health equity metrics",
-      "maternal and child health",
-      "long-term condition management",
-      "GP access and waiting times",
-      "health promotion effectiveness"
+    description = c(
+      "Weekly tracking of COVID-19 metrics across Scotland",
+      "Real-time monitoring of hospital admission capacity",
+      "Comprehensive vaccine rollout progress tracking",
+      "Utilization patterns of mental health services",
+      "Monitoring cancer treatment pathways and waiting times",
+      "Quality metrics for primary care practices",
+      "A&E department performance and wait times",
+      "Analysis of medication usage patterns",
+      "Long-term population health indicator trends",
+      "Staff satisfaction and retention metrics",
+      "Tracking quality improvement initiatives",
+      "Patient feedback and experience analysis",
+      "Mortality trend analysis by demographic",
+      "Dental service delivery and accessibility",
+      "Community care outcomes and capacity",
+      "Health equity metrics across populations",
+      "Maternal and child health indicators",
+      "Long-term condition management outcomes",
+      "GP access metrics and waiting time analysis",
+      "Health promotion campaign effectiveness",
+      "Hospital infection prevention metrics",
+      "Winter demand and capacity planning",
+      "NHS workforce planning and projections",
+      "Resource allocation optimization tool",
+      "Clinical outcomes across specialties"
+    ),
+    # Product type using new schema values
+    type = sample(
+      c("shiny_dashboard", "quarto_report", "dash_app", "api_service"),
+      n,
+      replace = TRUE,
+      prob = c(0.5, 0.3, 0.15, 0.05)
+    ),
+    department = sample(
+      c("Digital & Technology", "Public Health", "Healthcare Quality & Strategy", "Intelligence"),
+      n,
+      replace = TRUE
+    ),
+    team = sample(
+      c("Analytics", "Intelligence", "Data Science", "Operations", "Quality", "Digital Services"),
+      n,
+      replace = TRUE
+    ),
+
+    # New workflow fields
+    lifecycle_stage = lifecycle_stages,
+    current_status = current_status,
+
+    # User/ownership
+    created_by = sample(c("alice.smith", "bob.jones", "carol.white", "david.brown", "eve.wilson"), n, replace = TRUE),
+    owner_id = paste0("user-", sample(1:5, n, replace = TRUE)),
+    owner_name = sample(c("Alice Smith", "Bob Jones", "Carol White", "David Brown", "Eve Wilson"), n, replace = TRUE),
+    owner_email = paste0("user", sample(1:5, n, replace = TRUE), "@phs.scot"),
+
+    # Legacy fields for compatibility
+    url = ifelse(lifecycle_stages == "deployed",
+      paste0("https://connect.phs.scot/dashboard-", 1:n),
+      NA_character_
+    ),
+    platform = sample(c("posit_connect", "shinyapps_io", "other"), n, replace = TRUE),
+    status = current_status,  # Alias for compatibility
+    visibility = sample(c("public", "internal", "restricted"), n, replace = TRUE),
+    deployment_date = as.POSIXct(ifelse(
+      lifecycle_stages == "deployed",
+      Sys.Date() - sample(1:365, n, replace = TRUE),
+      NA
     )),
-    url = paste0("https://connect.phs.scot/dashboard-", 1:20),
-    platform = sample(c("posit_connect", "shinyapps_io", "other"), 20, replace = TRUE),
-    type = sample(c("shiny", "rmarkdown", "quarto"), 20, replace = TRUE),
-    owner_id = paste0("user-", sample(1:5, 20, replace = TRUE)),
-    owner_name = sample(c("Alice Smith", "Bob Jones", "Carol White", "David Brown", "Eve Wilson"), 20, replace = TRUE),
-    owner_email = paste0("user", sample(1:5, 20, replace = TRUE), "@phs.scot"),
-    team = sample(c("Analytics", "Intelligence", "Data Science", "Operations", "Quality"), 20, replace = TRUE),
-    department = sample(c("Digital", "Public Health", "Healthcare Quality"), 20, replace = TRUE),
-    status = sample(c("published", "approved", "draft", "pending_approval"), 20, replace = TRUE, prob = c(0.5, 0.2, 0.2, 0.1)),
-    visibility = sample(c("public", "internal", "restricted"), 20, replace = TRUE),
-    deployment_date = as.POSIXct(Sys.Date() - sample(1:365, 20, replace = TRUE)),
-    last_updated = as.POSIXct(Sys.Date() - sample(1:30, 20, replace = TRUE)),
-    update_frequency = sample(c("daily", "weekly", "monthly"), 20, replace = TRUE),
+    last_updated = as.POSIXct(Sys.Date() - sample(1:30, n, replace = TRUE)),
+    update_frequency = sample(c("daily", "weekly", "monthly", "quarterly"), n, replace = TRUE),
+
+    # URLs
     repository_url = ifelse(
-      runif(20) > 0.3,
-      paste0("https://github.com/PHS/dashboard-", 1:20),
+      runif(n) > 0.2,
+      paste0("https://github.com/PHS/product-", 1:n),
       NA_character_
     ),
     documentation_url = ifelse(
-      runif(20) > 0.4,
-      paste0("https://docs.phs.scot/dashboard-", 1:20),
+      runif(n) > 0.3,
+      paste0("https://docs.phs.scot/product-", 1:n),
       NA_character_
     ),
-    tags = I(lapply(1:20, function(x) sample(c("covid", "hospital", "vaccine", "gp", "mental-health"), sample(1:3, 1)))),
-    keywords = I(lapply(1:20, function(x) sample(c("analytics", "monitoring", "reporting"), sample(1:2, 1)))),
-    metadata = I(lapply(1:20, function(x) list())),
-    overall_score = round(runif(20, 45, 98), 1),
-    grade = c(
-      "excellent", "good", "excellent", "good", "acceptable",
-      "excellent", "good", "poor", "excellent", "good",
-      "acceptable", "good", "excellent", "acceptable", "good",
-      "excellent", "good", "acceptable", "excellent", "good"
+
+    # Metadata
+    tags = I(lapply(1:n, function(x) {
+      sample(c("covid", "hospital", "vaccine", "gp", "mental-health", "quality", "performance"),
+        sample(2:4, 1))
+    })),
+    keywords = I(lapply(1:n, function(x) {
+      sample(c("analytics", "monitoring", "reporting", "dashboard", "tracker"),
+        sample(2:3, 1))
+    })),
+    metadata = I(lapply(1:n, function(x) list())),
+
+    # Compliance scores (only for deployed products)
+    overall_score = ifelse(lifecycle_stages == "deployed",
+      round(runif(n, 55, 98), 1),
+      NA_real_
     ),
-    compliant = overall_score >= 60,
-    last_compliance_check = as.POSIXct(Sys.Date() - sample(1:7, 20, replace = TRUE)),
-    accessibility_score = round(runif(20, 50, 100), 1),
-    documentation_score = round(runif(20, 40, 100), 1),
-    repository_score = round(runif(20, 30, 100), 1),
-    security_score = round(runif(20, 60, 100), 1),
-    created_at = as.POSIXct(Sys.Date() - sample(30:400, 20, replace = TRUE)),
-    updated_at = as.POSIXct(Sys.Date() - sample(1:30, 20, replace = TRUE))
+    grade = ifelse(lifecycle_stages == "deployed",
+      sample(c("excellent", "good", "acceptable", "poor"), n, replace = TRUE, prob = c(0.3, 0.4, 0.25, 0.05)),
+      NA_character_
+    ),
+    compliant = ifelse(!is.na(overall_score), overall_score >= 60, NA),
+    last_compliance_check = as.POSIXct(ifelse(
+      lifecycle_stages == "deployed",
+      Sys.Date() - sample(1:30, n, replace = TRUE),
+      NA
+    )),
+    accessibility_score = ifelse(lifecycle_stages == "deployed", round(runif(n, 60, 100), 1), NA_real_),
+    documentation_score = ifelse(lifecycle_stages == "deployed", round(runif(n, 50, 100), 1), NA_real_),
+    repository_score = ifelse(lifecycle_stages == "deployed", round(runif(n, 40, 100), 1), NA_real_),
+    security_score = ifelse(lifecycle_stages == "deployed", round(runif(n, 70, 100), 1), NA_real_),
+
+    # Timestamps
+    created_at = as.POSIXct(Sys.Date() - sample(30:730, n, replace = TRUE)),
+    updated_at = as.POSIXct(Sys.Date() - sample(1:30, n, replace = TRUE))
   )
 }
 
@@ -311,6 +392,14 @@ MockApprovalRepository <- R6::R6Class(
       }
 
       data
+    },
+
+    get_by_product_id = function(product_id) {
+      data <- dplyr::filter(private$data, dashboard_id == !!product_id)
+      if (nrow(data) > 0) {
+        return(data[1, ])  # Return first match
+      }
+      NULL
     },
 
     create = function(approval_data) {

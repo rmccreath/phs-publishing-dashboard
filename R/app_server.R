@@ -188,14 +188,31 @@ app_server <- function(input, output, session) {
     )
   }
 
+  # Initialize router
+  shiny.router::router_server()
+
   # Initialize modules
   if (!is.null(dashboard_repo)) {
-    # Dashboard Registry Module
-    mod_dashboard_registry_server(
-      "registry",
-      dashboard_repo = dashboard_repo,
-      connect_service = connect_service,
-      shinyapps_service = shinyapps_service,
+    # Product List Module (new main page)
+    mod_product_list_server(
+      "product_list",
+      product_repo = dashboard_repo,  # Using dashboard_repo as product_repo for now
+      user = current_user
+    )
+
+    # Also initialize for default route
+    mod_product_list_server(
+      "product_list_default",
+      product_repo = dashboard_repo,
+      user = current_user
+    )
+
+    # Product Detail Module
+    mod_product_detail_server(
+      "product_detail",
+      product_repo = dashboard_repo,
+      approval_repo = approval_repo,
+      audit_repo = NULL,  # Phase 2
       user = current_user
     )
 
@@ -209,7 +226,30 @@ app_server <- function(input, output, session) {
       )
     }
 
-    # Compliance Tracker Module
+    # Audit Management Module (Phase 2 placeholder)
+    mod_audit_management_server("audits")
+
+    # Review Management Module (Phase 4 placeholder)
+    mod_review_management_server("reviews")
+
+    # Analytics & Reporting Module
+    mod_analytics_reporting_server(
+      "analytics",
+      dashboard_repo = dashboard_repo,
+      user = current_user
+    )
+
+    # Legacy modules (keeping for now, can remove later)
+    # Dashboard Registry Module (old)
+    mod_dashboard_registry_server(
+      "registry",
+      dashboard_repo = dashboard_repo,
+      connect_service = connect_service,
+      shinyapps_service = shinyapps_service,
+      user = current_user
+    )
+
+    # Compliance Tracker Module (old, to be integrated into audit later)
     if (!is.null(compliance_repo) && !is.null(compliance_service)) {
       mod_compliance_tracker_server(
         "compliance",
@@ -219,13 +259,6 @@ app_server <- function(input, output, session) {
         user = current_user
       )
     }
-
-    # Analytics & Reporting Module
-    mod_analytics_reporting_server(
-      "analytics",
-      dashboard_repo = dashboard_repo,
-      user = current_user
-    )
   }
 
   # Cleanup on session end

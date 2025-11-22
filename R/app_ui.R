@@ -34,7 +34,26 @@ app_ui <- function(request) {
   # Add custom CSS
   phs_theme <- bslib::bs_add_rules(
     phs_theme,
-    sass::sass_file(system.file("app/www/custom.css", package = "phsgovernance"))
+    "
+    .product-timeline {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1rem;
+      background: #f8f9fa;
+      border-radius: 0.5rem;
+    }
+    .product-timeline .timeline-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.5rem;
+      flex: 1;
+    }
+    .product-timeline .timeline-item i {
+      font-size: 1.5rem;
+    }
+    "
   )
 
   bslib::page_navbar(
@@ -54,36 +73,50 @@ app_ui <- function(request) {
       waiter::useWaiter()
     ),
 
-    # Dashboard Registry Tab
-    bslib::nav_panel(
-      title = "Registry",
-      icon = bsicons::bs_icon("grid"),
-      value = "registry",
-      mod_dashboard_registry_ui("registry")
+    # Navigation links (using custom nav items that trigger routing)
+    bslib::nav_item(
+      shiny::tags$a(
+        href = shiny.router::route_link("products"),
+        class = "nav-link",
+        bsicons::bs_icon("grid"),
+        " Products"
+      )
     ),
 
-    # Approval Workflow Tab
-    bslib::nav_panel(
-      title = "Approvals",
-      icon = bsicons::bs_icon("clipboard-check"),
-      value = "approvals",
-      mod_approval_workflow_ui("approvals")
+    bslib::nav_item(
+      shiny::tags$a(
+        href = shiny.router::route_link("approvals"),
+        class = "nav-link",
+        bsicons::bs_icon("clipboard-check"),
+        " Approvals"
+      )
     ),
 
-    # Compliance Tab
-    bslib::nav_panel(
-      title = "Compliance",
-      icon = bsicons::bs_icon("shield-check"),
-      value = "compliance",
-      mod_compliance_tracker_ui("compliance")
+    bslib::nav_item(
+      shiny::tags$a(
+        href = shiny.router::route_link("audits"),
+        class = "nav-link",
+        bsicons::bs_icon("search"),
+        " Audits"
+      )
     ),
 
-    # Analytics Tab
-    bslib::nav_panel(
-      title = "Analytics",
-      icon = bsicons::bs_icon("bar-chart"),
-      value = "analytics",
-      mod_analytics_reporting_ui("analytics")
+    bslib::nav_item(
+      shiny::tags$a(
+        href = shiny.router::route_link("reviews"),
+        class = "nav-link",
+        bsicons::bs_icon("clock-history"),
+        " Reviews"
+      )
+    ),
+
+    bslib::nav_item(
+      shiny::tags$a(
+        href = shiny.router::route_link("analytics"),
+        class = "nav-link",
+        bsicons::bs_icon("bar-chart"),
+        " Analytics"
+      )
     ),
 
     # Spacer
@@ -131,6 +164,34 @@ app_ui <- function(request) {
           bsicons::bs_icon("book"),
           " Documentation"
         )
+      )
+    ),
+
+    # Main content area with router
+    bslib::nav_panel(
+      title = NULL,  # No title for the main panel
+      value = "main_content",
+      shiny.router::router_ui(
+        # Products list page (default)
+        shiny.router::route("products", mod_product_list_ui("product_list")),
+
+        # Product detail page
+        shiny.router::route("product", mod_product_detail_ui("product_detail")),
+
+        # Approvals
+        shiny.router::route("approvals", mod_approval_workflow_ui("approvals")),
+
+        # Audits
+        shiny.router::route("audits", mod_audit_management_ui("audits")),
+
+        # Reviews
+        shiny.router::route("reviews", mod_review_management_ui("reviews")),
+
+        # Analytics
+        shiny.router::route("analytics", mod_analytics_reporting_ui("analytics")),
+
+        # Default route (redirect to products)
+        shiny.router::route("/", mod_product_list_ui("product_list_default"))
       )
     ),
 
