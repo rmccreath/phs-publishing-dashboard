@@ -9,9 +9,9 @@ ComplianceService <- R6::R6Class(
     github_service = NULL,
     logger = NULL,
 
-    #' Calculate grade from score
-    #' @param score Overall score
-    #' @return Grade string
+    # Calculate grade from score
+    # @param score Overall score
+    # @return Grade string
     calculate_grade = function(score) {
       thresholds <- private$config$compliance$thresholds
 

@@ -11,11 +11,11 @@ PositConnectService <- R6::R6Class(
     cache_ttl = NULL,
     logger = NULL,
 
-    #' Make API request
-    #' @param endpoint API endpoint
-    #' @param method HTTP method
-    #' @param body Request body
-    #' @return Response data
+    # Make API request
+    # @param endpoint API endpoint
+    # @param method HTTP method
+    # @param body Request body
+    # @return Response data
     request = function(endpoint, method = "GET", body = NULL) {
       req <- httr2::request(private$base_url) %>%
         httr2::req_url_path_append(endpoint) %>%

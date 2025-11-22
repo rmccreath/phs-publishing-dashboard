@@ -12,11 +12,11 @@ ShinyAppsService <- R6::R6Class(
     cache_ttl = NULL,
     logger = NULL,
 
-    #' Generate HMAC signature for authentication
-    #' @param method HTTP method
-    #' @param path URL path
-    #' @param timestamp Unix timestamp
-    #' @return Signature string
+    # Generate HMAC signature for authentication
+    # @param method HTTP method
+    # @param path URL path
+    # @param timestamp Unix timestamp
+    # @return Signature string
     generate_signature = function(method, path, timestamp) {
       message <- paste(method, path, timestamp, sep = "\n")
       signature <- digest::hmac(
@@ -28,10 +28,10 @@ ShinyAppsService <- R6::R6Class(
       base64enc::base64encode(charToRaw(signature))
     },
 
-    #' Make API request
-    #' @param endpoint API endpoint
-    #' @param method HTTP method
-    #' @return Response data
+    # Make API request
+    # @param endpoint API endpoint
+    # @param method HTTP method
+    # @return Response data
     request = function(endpoint, method = "GET") {
       timestamp <- as.character(as.integer(Sys.time()))
       path <- paste0("/v1/", endpoint)
