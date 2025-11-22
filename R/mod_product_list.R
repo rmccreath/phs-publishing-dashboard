@@ -174,33 +174,51 @@ mod_product_list_server <- function(id, product_repo, user) {
       input$btn_refresh
       rv$last_refresh
 
-      # Get all products
-      data <- product_repo$get_all()
+      tryCatch({
+        # Get all products
+        data <- product_repo$get_all()
 
-      # Apply filters
-      if (!is.null(input$filter_stage) && input$filter_stage != "") {
-        data <- data %>% dplyr::filter(lifecycle_stage == input$filter_stage)
-      }
+        # Ensure we have data
+        if (is.null(data) || nrow(data) == 0) {
+          message("No products found in repository")
+          return(tibble::tibble())
+        }
 
-      if (!is.null(input$filter_type) && input$filter_type != "") {
-        data <- data %>% dplyr::filter(type == input$filter_type)
-      }
+        message("Loaded ", nrow(data), " products")
 
-      if (!is.null(input$filter_department) && input$filter_department != "") {
-        data <- data %>% dplyr::filter(department == input$filter_department)
-      }
+        # Apply filters
+        if (!is.null(input$filter_stage) && input$filter_stage != "") {
+          data <- data %>% dplyr::filter(lifecycle_stage == input$filter_stage)
+        }
 
-      if (!is.null(input$filter_search) && nchar(input$filter_search) > 0) {
-        search_term <- tolower(input$filter_search)
-        data <- data %>%
-          dplyr::filter(
-            grepl(search_term, tolower(name)) |
-            grepl(search_term, tolower(description %||% ""))
-          )
-      }
+        if (!is.null(input$filter_type) && input$filter_type != "") {
+          data <- data %>% dplyr::filter(type == input$filter_type)
+        }
 
-      # Filter by access permissions
-      filter_by_access(data, user(), "created_by", "team")
+        if (!is.null(input$filter_department) && input$filter_department != "") {
+          data <- data %>% dplyr::filter(department == input$filter_department)
+        }
+
+        if (!is.null(input$filter_search) && nchar(input$filter_search) > 0) {
+          search_term <- tolower(input$filter_search)
+          data <- data %>%
+            dplyr::filter(
+              grepl(search_term, tolower(name)) |
+              grepl(search_term, tolower(description %||% ""))
+            )
+        }
+
+        # Filter by access permissions
+        filter_by_access(data, user(), "created_by", "team")
+      }, error = function(e) {
+        message("Error loading products: ", e$message)
+        shiny::showNotification(
+          paste("Error loading products:", e$message),
+          type = "error",
+          duration = 5
+        )
+        tibble::tibble()
+      })
     })
 
     # Update department choices dynamically

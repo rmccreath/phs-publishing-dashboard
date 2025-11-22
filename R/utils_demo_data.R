@@ -145,12 +145,12 @@ generate_sample_dashboards <- function() {
 
     # Metadata
     tags = I(lapply(1:n, function(x) {
-      sample(c("covid", "hospital", "vaccine", "gp", "mental-health", "quality", "performance"),
-        sample(2:4, 1))
+      as.vector(sample(c("covid", "hospital", "vaccine", "gp", "mental-health", "quality", "performance"),
+        sample(2:4, 1)))
     })),
     keywords = I(lapply(1:n, function(x) {
-      sample(c("analytics", "monitoring", "reporting", "dashboard", "tracker"),
-        sample(2:3, 1))
+      as.vector(sample(c("analytics", "monitoring", "reporting", "dashboard", "tracker"),
+        sample(2:3, 1)))
     })),
     metadata = I(lapply(1:n, function(x) list())),
 
