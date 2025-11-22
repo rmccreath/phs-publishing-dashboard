@@ -27,31 +27,54 @@ app_server <- function(input, output, session) {
     current_user()$team
   })
 
-  # Initialize database connection pool
-  pool <- tryCatch(
-    {
-      create_db_pool()
-    },
-    error = function(e) {
-      log_message(paste("Database connection error:", e$message), "WARNING")
-      NULL
-    }
-  )
+  # Check if running in demo mode
+  demo_mode <- is_demo_mode()
 
-  # Initialize repositories
-  dashboard_repo <- if (!is.null(pool)) {
+  if (demo_mode) {
+    log_message("Running in DEMO MODE with sample data", "INFO")
+    shiny::showNotification(
+      "Running in demo mode with sample data. No database required.",
+      type = "message",
+      duration = 10,
+      id = "demo_mode_notification"
+    )
+  }
+
+  # Initialize database connection pool (skip in demo mode)
+  pool <- if (!demo_mode) {
+    tryCatch(
+      {
+        create_db_pool()
+      },
+      error = function(e) {
+        log_message(paste("Database connection error:", e$message), "WARNING")
+        NULL
+      }
+    )
+  } else {
+    NULL
+  }
+
+  # Initialize repositories (use mock repos in demo mode)
+  dashboard_repo <- if (demo_mode) {
+    MockDashboardRepository$new()
+  } else if (!is.null(pool)) {
     DashboardRepository$new(pool)
   } else {
     NULL
   }
 
-  approval_repo <- if (!is.null(pool)) {
+  approval_repo <- if (demo_mode) {
+    MockApprovalRepository$new()
+  } else if (!is.null(pool)) {
     ApprovalRepository$new(pool)
   } else {
     NULL
   }
 
-  compliance_repo <- if (!is.null(pool)) {
+  compliance_repo <- if (demo_mode) {
+    MockComplianceRepository$new()
+  } else if (!is.null(pool)) {
     ComplianceRepository$new(pool)
   } else {
     NULL

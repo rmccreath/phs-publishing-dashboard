@@ -50,17 +50,27 @@ A centralized governance dashboard for tracking, monitoring, and reporting on da
 - GitHub personal access token
 - ShinyApps.io credentials (optional)
 
-### Quick Start
+### Quick Start (Demo Mode - No Database Required!)
 
-```r
-# Install the package
-devtools::install()
-
-# Run the application
-phsgovernance::run_app()
+**Option 1: One-line launcher**
+```bash
+Rscript run_demo.R
 ```
 
-See the full documentation in the `/docs` folder for detailed setup instructions.
+**Option 2: R Console**
+```r
+# Clean install (if you had installation errors)
+source("INSTALL.R")
+
+# Run in demo mode
+library(phsgovernance)
+Sys.setenv(DEMO_MODE = "true")
+run_app()
+```
+
+**Option 3: Full Setup with Database**
+
+See [`docs/QUICKSTART.md`](docs/QUICKSTART.md) for database setup instructions.
 
 ## 📖 Project Structure
 
