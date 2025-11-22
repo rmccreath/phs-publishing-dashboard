@@ -1,0 +1,120 @@
+default:
+  app:
+    name: "PHS Dashboard Governance Hub"
+    version: "0.1.0"
+    port: 3838
+
+  database:
+    driver: "PostgreSQL"
+    host: "localhost"
+    port: 5432
+    dbname: "phs_governance"
+    user: "phs_user"
+    password: !expr Sys.getenv("DB_PASSWORD")
+    pool_size: 5
+
+  apis:
+    posit_connect:
+      base_url: !expr Sys.getenv("CONNECT_SERVER")
+      api_key: !expr Sys.getenv("CONNECT_API_KEY")
+      rate_limit: 1000
+      cache_ttl: 3600
+
+    shinyapps_io:
+      base_url: "https://api.shinyapps.io/v1"
+      api_key: !expr Sys.getenv("SHINYAPPS_API_KEY")
+      api_secret: !expr Sys.getenv("SHINYAPPS_API_SECRET")
+      rate_limit: 5000
+      cache_ttl: 3600
+
+    github:
+      base_url: "https://api.github.com"
+      token: !expr Sys.getenv("GITHUB_TOKEN")
+      org: "Public-Health-Scotland"
+      rate_limit: 5000
+      cache_ttl: 3600
+
+    google_analytics:
+      property_id: !expr Sys.getenv("GA_PROPERTY_ID")
+      credentials_file: !expr Sys.getenv("GA_CREDENTIALS")
+
+  rbac:
+    roles:
+      - admin
+      - governance
+      - team_lead
+      - owner
+      - viewer
+
+    permissions:
+      admin:
+        - view_all
+        - edit_all
+        - approve
+        - configure_system
+      governance:
+        - view_all
+        - approve
+        - manage_compliance
+      team_lead:
+        - view_team
+        - submit
+        - approve_team
+      owner:
+        - view_own
+        - submit
+        - edit_own
+      viewer:
+        - view_summary
+
+  compliance:
+    metrics:
+      accessibility:
+        weight: 0.25
+        required: true
+      documentation:
+        weight: 0.20
+        required: true
+      repository:
+        weight: 0.15
+        required: true
+      testing:
+        weight: 0.15
+        required: false
+      security:
+        weight: 0.25
+        required: true
+
+    thresholds:
+      excellent: 90
+      good: 75
+      acceptable: 60
+      poor: 0
+
+  notifications:
+    enabled: true
+    email:
+      smtp_server: "smtp.nhs.scot"
+      from_address: "governance@phs.scot"
+    teams:
+      webhook_url: !expr Sys.getenv("TEAMS_WEBHOOK")
+
+development:
+  database:
+    dbname: "phs_governance_dev"
+
+  apis:
+    posit_connect:
+      base_url: "http://localhost:3939"
+
+test:
+  database:
+    dbname: "phs_governance_test"
+
+production:
+  database:
+    host: !expr Sys.getenv("PROD_DB_HOST")
+    dbname: "phs_governance_prod"
+
+  app:
+    port: 80

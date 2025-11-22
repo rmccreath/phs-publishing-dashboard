@@ -1,0 +1,30 @@
+# PHS Dashboard Governance Hub - Environment Variables
+# Copy this file to .Renviron and fill in your values
+
+# Application Environment
+R_CONFIG_ACTIVE=development
+
+# Database Configuration
+DB_PASSWORD=your_database_password_here
+
+# Posit Connect API
+CONNECT_SERVER=https://your-connect-server.com
+CONNECT_API_KEY=your_connect_api_key_here
+
+# ShinyApps.io API
+SHINYAPPS_API_KEY=your_shinyapps_api_key_here
+SHINYAPPS_API_SECRET=your_shinyapps_api_secret_here
+
+# GitHub API
+GITHUB_TOKEN=your_github_personal_access_token_here
+
+# Google Analytics
+GA_PROPERTY_ID=your_ga_property_id_here
+GA_CREDENTIALS=/path/to/your/ga_credentials.json
+
+# User Management
+ADMIN_USERS=admin,user1
+GOVERNANCE_USERS=governance1,governance2
+
+# Teams Notifications (optional)
+TEAMS_WEBHOOK=your_teams_webhook_url_here
