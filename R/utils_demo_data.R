@@ -65,8 +65,8 @@ generate_sample_dashboards <- function() {
     department = sample(c("Digital", "Public Health", "Healthcare Quality"), 20, replace = TRUE),
     status = sample(c("published", "approved", "draft", "pending_approval"), 20, replace = TRUE, prob = c(0.5, 0.2, 0.2, 0.1)),
     visibility = sample(c("public", "internal", "restricted"), 20, replace = TRUE),
-    deployment_date = as.POSIXct(Sys.Date() - sample(1:365, 20)),
-    last_updated = as.POSIXct(Sys.Date() - sample(1:30, 20)),
+    deployment_date = as.POSIXct(Sys.Date() - sample(1:365, 20, replace = TRUE)),
+    last_updated = as.POSIXct(Sys.Date() - sample(1:30, 20, replace = TRUE)),
     update_frequency = sample(c("daily", "weekly", "monthly"), 20, replace = TRUE),
     repository_url = ifelse(
       runif(20) > 0.3,
@@ -89,13 +89,13 @@ generate_sample_dashboards <- function() {
       "excellent", "good", "acceptable", "excellent", "good"
     ),
     compliant = overall_score >= 60,
-    last_compliance_check = as.POSIXct(Sys.Date() - sample(1:7, 20)),
+    last_compliance_check = as.POSIXct(Sys.Date() - sample(1:7, 20, replace = TRUE)),
     accessibility_score = round(runif(20, 50, 100), 1),
     documentation_score = round(runif(20, 40, 100), 1),
     repository_score = round(runif(20, 30, 100), 1),
     security_score = round(runif(20, 60, 100), 1),
-    created_at = as.POSIXct(Sys.Date() - sample(30:400, 20)),
-    updated_at = as.POSIXct(Sys.Date() - sample(1:30, 20))
+    created_at = as.POSIXct(Sys.Date() - sample(30:400, 20, replace = TRUE)),
+    updated_at = as.POSIXct(Sys.Date() - sample(1:30, 20, replace = TRUE))
   )
 }
 
@@ -106,11 +106,11 @@ generate_sample_dashboards <- function() {
 generate_sample_approvals <- function() {
   tibble::tibble(
     approval_id = paste0("approval-", 1:10),
-    dashboard_id = paste0("demo-", sample(15:20, 10)),
-    dashboard_name = paste("Dashboard", sample(15:20, 10)),
+    dashboard_id = paste0("demo-", sample(15:20, 10, replace = TRUE)),
+    dashboard_name = paste("Dashboard", sample(15:20, 10, replace = TRUE)),
     submitted_by = paste0("user-", sample(1:5, 10, replace = TRUE)),
     submitted_by_name = sample(c("Alice Smith", "Bob Jones", "Carol White"), 10, replace = TRUE),
-    submitted_at = as.POSIXct(Sys.Date() - sample(1:30, 10)),
+    submitted_at = as.POSIXct(Sys.Date() - sample(1:30, 10, replace = TRUE)),
     business_justification = paste(
       "This dashboard is needed to provide stakeholders with timely insights into",
       sample(c("service performance", "patient outcomes", "operational efficiency"), 10, replace = TRUE)
@@ -121,7 +121,7 @@ generate_sample_approvals <- function() {
     support_plan = "Maintained by the Analytics team with on-call support",
     status = sample(c("pending", "under_review", "approved", "rejected", "requires_changes"), 10, replace = TRUE, prob = c(0.3, 0.2, 0.3, 0.1, 0.1)),
     reviewed_by = ifelse(runif(10) > 0.5, paste0("user-", sample(1:2, 10, replace = TRUE)), NA_character_),
-    reviewed_at = as.POSIXct(ifelse(runif(10) > 0.5, Sys.Date() - sample(1:15, 10), NA)),
+    reviewed_at = as.POSIXct(ifelse(runif(10) > 0.5, Sys.Date() - sample(1:15, 10, replace = TRUE), NA)),
     review_notes = ifelse(runif(10) > 0.7, "Please update documentation", NA_character_),
     governance_signoff = runif(10) > 0.6,
     governance_signoff_by = NA_character_,
@@ -133,8 +133,8 @@ generate_sample_approvals <- function() {
     security_signoff_by = NA_character_,
     security_signoff_at = as.POSIXct(NA),
     metadata = I(lapply(1:10, function(x) list())),
-    created_at = as.POSIXct(Sys.Date() - sample(30:60, 10)),
-    updated_at = as.POSIXct(Sys.Date() - sample(1:30, 10))
+    created_at = as.POSIXct(Sys.Date() - sample(30:60, 10, replace = TRUE)),
+    updated_at = as.POSIXct(Sys.Date() - sample(1:30, 10, replace = TRUE))
   )
 }
 

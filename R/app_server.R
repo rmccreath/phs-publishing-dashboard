@@ -57,7 +57,15 @@ app_server <- function(input, output, session) {
 
   # Initialize repositories (use mock repos in demo mode)
   dashboard_repo <- if (demo_mode) {
-    MockDashboardRepository$new()
+    tryCatch({
+      repo <- MockDashboardRepository$new()
+      log_message(paste("Created MockDashboardRepository with", nrow(repo$get_all()), "dashboards"), "INFO")
+      repo
+    }, error = function(e) {
+      log_message(paste("Error creating MockDashboardRepository:", e$message), "ERROR")
+      showNotification(paste("Error loading demo data:", e$message), type = "error", duration = 10)
+      NULL
+    })
   } else if (!is.null(pool)) {
     DashboardRepository$new(pool)
   } else {
@@ -65,7 +73,14 @@ app_server <- function(input, output, session) {
   }
 
   approval_repo <- if (demo_mode) {
-    MockApprovalRepository$new()
+    tryCatch({
+      repo <- MockApprovalRepository$new()
+      log_message(paste("Created MockApprovalRepository with", nrow(repo$get_all()), "approvals"), "INFO")
+      repo
+    }, error = function(e) {
+      log_message(paste("Error creating MockApprovalRepository:", e$message), "ERROR")
+      NULL
+    })
   } else if (!is.null(pool)) {
     ApprovalRepository$new(pool)
   } else {
@@ -73,7 +88,12 @@ app_server <- function(input, output, session) {
   }
 
   compliance_repo <- if (demo_mode) {
-    MockComplianceRepository$new()
+    tryCatch({
+      MockComplianceRepository$new()
+    }, error = function(e) {
+      log_message(paste("Error creating MockComplianceRepository:", e$message), "ERROR")
+      NULL
+    })
   } else if (!is.null(pool)) {
     ComplianceRepository$new(pool)
   } else {
@@ -118,10 +138,21 @@ app_server <- function(input, output, session) {
     NULL
   }
 
-  # Show warning if services are not available
-  if (is.null(pool)) {
+  # Show appropriate notification based on mode
+  if (demo_mode) {
     shiny::showNotification(
-      "Database connection not available. Running in demo mode.",
+      HTML(paste0(
+        "📊 <strong>Demo Mode Active</strong><br/>",
+        "Using sample data. No database required.<br/>",
+        if (!is.null(dashboard_repo)) paste0(nrow(dashboard_repo$get_all()), " sample dashboards loaded.") else "Error loading demo data."
+      )),
+      type = "message",
+      duration = NULL,
+      id = "demo_mode_info"
+    )
+  } else if (is.null(pool) && !demo_mode) {
+    shiny::showNotification(
+      "Database connection not available. Set DEMO_MODE=true to use sample data.",
       type = "warning",
       duration = NULL,
       id = "db_warning"
