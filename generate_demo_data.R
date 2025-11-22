@@ -15,7 +15,6 @@ cat("\n")
 suppressPackageStartupMessages({
   library(phsgovernance)
   library(dplyr)
-  library(lubridate)
 })
 
 # Enable demo mode
@@ -141,8 +140,8 @@ generate_rich_dashboards <- function(n = 30) {
     visibility = sample(c("public", "internal", "restricted"), n, replace = TRUE, prob = c(0.2, 0.6, 0.2)),
 
     # Dates
-    deployment_date = as.POSIXct(Sys.Date() - days(sample(1:730, n))),
-    last_updated = as.POSIXct(Sys.Date() - days(sample(1:60, n))),
+    deployment_date = as.POSIXct(Sys.Date() - sample(1:730, n)),
+    last_updated = as.POSIXct(Sys.Date() - sample(1:60, n)),
     update_frequency = sample(c("real_time", "daily", "weekly", "monthly", "quarterly"), n, replace = TRUE),
 
     # Links - not all dashboards have repos/docs
@@ -190,7 +189,7 @@ generate_rich_dashboards <- function(n = 30) {
       TRUE ~ "poor"
     ),
     compliant = overall_score >= 60,
-    last_compliance_check = as.POSIXct(Sys.Date() - days(sample(1:14, n))),
+    last_compliance_check = as.POSIXct(Sys.Date() - sample(1:14, n)),
 
     # Individual metric scores
     accessibility_score = pmin(100, overall_score + rnorm(n, 0, 10)),
@@ -199,8 +198,8 @@ generate_rich_dashboards <- function(n = 30) {
     security_score = pmin(100, overall_score + rnorm(n, 5, 8)),
 
     # Timestamps
-    created_at = deployment_date - days(sample(7:60, n)),
-    updated_at = as.POSIXct(Sys.Date() - days(sample(1:30, n)))
+    created_at = deployment_date - sample(7:60, n),
+    updated_at = as.POSIXct(Sys.Date() - sample(1:30, n))
   )
 }
 
@@ -274,7 +273,7 @@ generate_rich_approvals <- function(dashboards, n = 15) {
     # Submission
     submitted_by = eligible_dashboards$owner_id,
     submitted_by_name = eligible_dashboards$owner_name,
-    submitted_at = as.POSIXct(Sys.Date() - days(sample(1:60, nrow(eligible_dashboards)))),
+    submitted_at = as.POSIXct(Sys.Date() - sample(1:60, nrow(eligible_dashboards))),
 
     # Justification
     business_justification = sample(justifications, nrow(eligible_dashboards), replace = TRUE),
@@ -299,7 +298,7 @@ generate_rich_approvals <- function(dashboards, n = 15) {
     reviewed_by = ifelse(status != "pending", paste0("user-", sample(1:3, nrow(eligible_dashboards), replace = TRUE)), NA_character_),
     reviewed_at = as.POSIXct(ifelse(
       status != "pending",
-      submitted_at + days(sample(3:14, nrow(eligible_dashboards))),
+      submitted_at + sample(3:14, nrow(eligible_dashboards)),
       NA
     ), origin = "1970-01-01"),
     review_notes = case_when(
@@ -318,15 +317,15 @@ generate_rich_approvals <- function(dashboards, n = 15) {
     # Sign-offs (more likely for approved/under_review)
     governance_signoff = status %in% c("approved") | (status == "under_review" & runif(nrow(eligible_dashboards)) > 0.5),
     governance_signoff_by = ifelse(governance_signoff, "user-1", NA_character_),
-    governance_signoff_at = as.POSIXct(ifelse(governance_signoff, reviewed_at + days(sample(1:3, nrow(eligible_dashboards))), NA), origin = "1970-01-01"),
+    governance_signoff_at = as.POSIXct(ifelse(governance_signoff, reviewed_at + sample(1:3, nrow(eligible_dashboards)), NA), origin = "1970-01-01"),
 
     technical_signoff = status %in% c("approved") | (status == "under_review" & runif(nrow(eligible_dashboards)) > 0.6),
     technical_signoff_by = ifelse(technical_signoff, "user-2", NA_character_),
-    technical_signoff_at = as.POSIXct(ifelse(technical_signoff, reviewed_at + days(sample(1:3, nrow(eligible_dashboards))), NA), origin = "1970-01-01"),
+    technical_signoff_at = as.POSIXct(ifelse(technical_signoff, reviewed_at + sample(1:3, nrow(eligible_dashboards)), NA), origin = "1970-01-01"),
 
     security_signoff = status %in% c("approved") | (status == "under_review" & runif(nrow(eligible_dashboards)) > 0.4),
     security_signoff_by = ifelse(security_signoff, "user-3", NA_character_),
-    security_signoff_at = as.POSIXct(ifelse(security_signoff, reviewed_at + days(sample(1:5, nrow(eligible_dashboards))), NA), origin = "1970-01-01"),
+    security_signoff_at = as.POSIXct(ifelse(security_signoff, reviewed_at + sample(1:5, nrow(eligible_dashboards)), NA), origin = "1970-01-01"),
 
     # Metadata
     metadata = I(lapply(1:nrow(eligible_dashboards), function(x) list())),
