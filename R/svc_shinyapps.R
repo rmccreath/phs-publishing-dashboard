@@ -64,7 +64,7 @@ ShinyAppsService <- R6::R6Class(
     #' @param api_key ShinyApps.io API key
     #' @param api_secret ShinyApps.io API secret
     initialize = function(api_key = NULL, api_secret = NULL) {
-      config <- config::get()
+      config <- safe_get_config()
 
       private$base_url <- config$apis$shinyapps_io$base_url
       private$api_key <- api_key %||% config$apis$shinyapps_io$api_key
@@ -73,8 +73,10 @@ ShinyAppsService <- R6::R6Class(
       private$cache <- cachem::cache_mem()
       private$logger <- log4r::logger()
 
-      if (is.null(private$api_key) || is.null(private$api_secret)) {
-        warning("ShinyApps.io credentials not configured")
+      if (is.null(private$api_key) || is.null(private$api_secret) ||
+          nchar(private$api_key) == 0 || nchar(private$api_secret) == 0) {
+        warning("ShinyApps.io credentials not configured - API calls will not work")
+        private$logger$warning("ShinyApps.io service initialized without credentials")
       }
     },
 

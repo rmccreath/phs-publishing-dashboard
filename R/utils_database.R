@@ -8,18 +8,23 @@
 #' @return A pool object
 #' @export
 create_db_pool <- function() {
-  config <- config::get()
+  config <- safe_get_config()
 
-  pool::dbPool(
-    drv = RPostgres::Postgres(),
-    dbname = config$database$dbname,
-    host = config$database$host,
-    port = config$database$port,
-    user = config$database$user,
-    password = config$database$password,
-    minSize = 1,
-    maxSize = config$database$pool_size
-  )
+  tryCatch({
+    pool::dbPool(
+      drv = RPostgres::Postgres(),
+      dbname = config$database$dbname,
+      host = config$database$host,
+      port = config$database$port,
+      user = config$database$user,
+      password = config$database$password,
+      minSize = 1,
+      maxSize = config$database$pool_size
+    )
+  }, error = function(e) {
+    warning("Failed to create database pool: ", e$message)
+    NULL
+  })
 }
 
 #' Close database pool

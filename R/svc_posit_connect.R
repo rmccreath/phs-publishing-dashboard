@@ -44,7 +44,7 @@ PositConnectService <- R6::R6Class(
     #' @param api_key API key
     #' @param cache_ttl Cache time-to-live in seconds
     initialize = function(base_url = NULL, api_key = NULL, cache_ttl = 3600) {
-      config <- config::get()
+      config <- safe_get_config()
 
       private$base_url <- base_url %||% config$apis$posit_connect$base_url
       private$api_key <- api_key %||% config$apis$posit_connect$api_key
@@ -52,8 +52,10 @@ PositConnectService <- R6::R6Class(
       private$cache <- cachem::cache_mem()
       private$logger <- log4r::logger()
 
-      if (is.null(private$base_url) || is.null(private$api_key)) {
-        stop("Posit Connect credentials not configured")
+      if (is.null(private$base_url) || is.null(private$api_key) ||
+          nchar(private$base_url) == 0 || nchar(private$api_key) == 0) {
+        warning("Posit Connect credentials not configured - API calls will not work")
+        private$logger$warning("Posit Connect service initialized without credentials")
       }
     },
 

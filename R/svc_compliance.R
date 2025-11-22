@@ -31,7 +31,7 @@ ComplianceService <- R6::R6Class(
     #' @description Initialize service
     #' @param github_service GitHub service instance
     initialize = function(github_service) {
-      private$config <- config::get()
+      private$config <- safe_get_config()
       private$github_service <- github_service
       private$logger <- log4r::logger()
     },

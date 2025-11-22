@@ -47,8 +47,6 @@ determine_user_role <- function(username) {
   # This would typically query a database or LDAP
   # For now, use simple logic based on username pattern
 
-  config <- config::get()
-
   # Check environment variable for admin users
   admin_users <- Sys.getenv("ADMIN_USERS", "")
   if (admin_users != "" && username %in% strsplit(admin_users, ",")[[1]]) {
@@ -92,7 +90,7 @@ get_user_department <- function(username) {
 #' @return Boolean
 #' @export
 has_permission <- function(user, permission) {
-  config <- config::get()
+  config <- safe_get_config()
   role_permissions <- config$rbac$permissions[[user$role]]
 
   if (is.null(role_permissions)) {

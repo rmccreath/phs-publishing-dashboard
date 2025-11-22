@@ -42,7 +42,7 @@ GitHubService <- R6::R6Class(
     #' @param token GitHub token
     #' @param org GitHub organization
     initialize = function(token = NULL, org = NULL) {
-      config <- config::get()
+      config <- safe_get_config()
 
       private$base_url <- config$apis$github$base_url
       private$token <- token %||% config$apis$github$token
@@ -51,8 +51,9 @@ GitHubService <- R6::R6Class(
       private$cache <- cachem::cache_mem()
       private$logger <- log4r::logger()
 
-      if (is.null(private$token)) {
-        stop("GitHub token not configured")
+      if (is.null(private$token) || nchar(private$token) == 0) {
+        warning("GitHub token not configured - API calls will not work")
+        private$logger$warning("GitHub service initialized without token")
       }
     },
 
