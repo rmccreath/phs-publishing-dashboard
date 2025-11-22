@@ -100,34 +100,63 @@ app_server <- function(input, output, session) {
     NULL
   }
 
-  # Initialize API services
+  # Initialize API services (wrapped for safety in demo mode)
   connect_service <- tryCatch(
     {
-      PositConnectService$new()
+      svc <- PositConnectService$new()
+      # Verify it's a proper R6 object with required methods
+      if (!is.null(svc) && "clear_cache" %in% names(svc)) {
+        svc
+      } else {
+        NULL
+      }
     },
     error = function(e) {
       log_message(paste("Posit Connect service error:", e$message), "WARNING")
       NULL
+    },
+    warning = function(w) {
+      log_message(paste("Posit Connect service warning:", w$message), "INFO")
+      # Continue despite warnings
+      invokeRestart("muffleWarning")
     }
   )
 
   shinyapps_service <- tryCatch(
     {
-      ShinyAppsService$new()
+      svc <- ShinyAppsService$new()
+      if (!is.null(svc) && "clear_cache" %in% names(svc)) {
+        svc
+      } else {
+        NULL
+      }
     },
     error = function(e) {
       log_message(paste("ShinyApps.io service error:", e$message), "WARNING")
       NULL
+    },
+    warning = function(w) {
+      log_message(paste("ShinyApps.io service warning:", w$message), "INFO")
+      invokeRestart("muffleWarning")
     }
   )
 
   github_service <- tryCatch(
     {
-      GitHubService$new()
+      svc <- GitHubService$new()
+      if (!is.null(svc) && "clear_cache" %in% names(svc)) {
+        svc
+      } else {
+        NULL
+      }
     },
     error = function(e) {
       log_message(paste("GitHub service error:", e$message), "WARNING")
       NULL
+    },
+    warning = function(w) {
+      log_message(paste("GitHub service warning:", w$message), "INFO")
+      invokeRestart("muffleWarning")
     }
   )
 

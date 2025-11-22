@@ -11,15 +11,42 @@ cat("║   PHS Dashboard Governance Hub - DEMO MODE                ║\n")
 cat("╚════════════════════════════════════════════════════════════╝\n")
 cat("\n")
 
-# Check if package is installed
+# Check if package is installed and not corrupted
+needs_install <- FALSE
 if (!requireNamespace("phsgovernance", quietly = TRUE)) {
   cat("📦 Package not installed. Installing now...\n\n")
+  needs_install <- TRUE
+} else {
+  # Check for corruption
+  test_load <- tryCatch({
+    loadNamespace("phsgovernance")
+    TRUE
+  }, error = function(e) {
+    if (grepl("corrupt|internal error", e$message, ignore.case = TRUE)) {
+      cat("⚠️  Package installation is corrupted. Reinstalling...\n\n")
+      TRUE
+    } else {
+      FALSE
+    }
+  })
 
+  if (test_load == TRUE && grepl("corrupt", test_load, ignore.case = TRUE)) {
+    needs_install <- TRUE
+  }
+}
+
+if (needs_install) {
   if (!requireNamespace("devtools", quietly = TRUE)) {
     install.packages("devtools")
   }
 
-  devtools::install(quiet = TRUE, upgrade = "never")
+  # Use clean install if corruption detected
+  if (file.exists("clean_install.R")) {
+    cat("Using clean installation process...\n")
+    source("clean_install.R")
+  } else {
+    devtools::install(quiet = FALSE, upgrade = "never", force = TRUE)
+  }
   cat("✅ Installation complete!\n\n")
 }
 
