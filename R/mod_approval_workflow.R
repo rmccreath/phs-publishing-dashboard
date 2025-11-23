@@ -762,9 +762,24 @@ mod_approval_workflow_server <- function(id, approval_repo, dashboard_repo, user
     output$history_table <- DT::renderDT({
       req(approval_history())
 
-      data <- approval_history() %>%
+      # Store full data for click handling
+      history_data <- approval_history()
+
+      data <- history_data %>%
+        dplyr::mutate(
+          # Create clickable links for product names
+          Product = paste0(
+            '<a href="#" onclick="Shiny.setInputValue(\'',
+            ns("history_product_link_clicked"),
+            '\', \'',
+            dashboard_id,
+            '\', {priority: \'event\'}); return false;">',
+            dashboard_name,
+            '</a>'
+          )
+        ) %>%
         dplyr::select(
-          Dashboard = dashboard_name,
+          Product,
           `Submitted By` = submitted_by_name,
           `Submitted At` = submitted_at,
           Status = status,
@@ -780,8 +795,16 @@ mod_approval_workflow_server <- function(id, approval_repo, dashboard_repo, user
           order = list(list(5, 'desc'))  # Sort by reviewed_at desc
         ),
         class = "display compact stripe hover",
-        rownames = FALSE
+        rownames = FALSE,
+        escape = FALSE  # Allow HTML in Product column
       )
+    })
+
+    # Handle history product link clicks
+    observeEvent(input$history_product_link_clicked, {
+      req(input$history_product_link_clicked)
+      product_id <- input$history_product_link_clicked
+      shiny.router::change_page(paste0("/product?id=", product_id))
     })
   })
 }

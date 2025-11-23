@@ -630,13 +630,111 @@ mod_product_detail_server <- function(id, product_repo, approval_repo, audit_rep
       )
     })
 
-    # Edit button
+    # Edit button - show edit modal
     observeEvent(input$btn_edit, {
-      shiny::showNotification(
-        "Edit functionality will be implemented in future phases.",
-        type = "message",
-        duration = 3
+      prod <- product()
+      req(prod)
+      req(nrow(prod) > 0)
+
+      # Show modal with current product data
+      shiny::showModal(
+        shiny::modalDialog(
+          title = "Edit Product",
+          size = "l",
+
+          shiny::textInput(
+            ns("edit_name"),
+            "Product Name",
+            value = as.character(prod$name[1])
+          ),
+
+          shiny::textAreaInput(
+            ns("edit_description"),
+            "Description",
+            value = as.character(prod$description[1]),
+            rows = 3
+          ),
+
+          shiny::selectInput(
+            ns("edit_type"),
+            "Product Type",
+            choices = c(
+              "Shiny Dashboard" = "shiny_dashboard",
+              "Quarto Report" = "quarto_report",
+              "Dash Application" = "dash_app",
+              "API Service" = "api_service"
+            ),
+            selected = as.character(prod$type[1])
+          ),
+
+          shiny::textInput(
+            ns("edit_department"),
+            "Department",
+            value = as.character(prod$department[1])
+          ),
+
+          shiny::textInput(
+            ns("edit_team"),
+            "Team",
+            value = as.character(prod$team[1])
+          ),
+
+          footer = shiny::tagList(
+            shiny::modalButton("Cancel"),
+            shiny::actionButton(
+              ns("btn_save_edit"),
+              "Save Changes",
+              class = "btn-primary"
+            )
+          )
+        )
       )
+    })
+
+    # Save edited product
+    observeEvent(input$btn_save_edit, {
+      req(product_id())
+
+      # Validate inputs
+      if (is.null(input$edit_name) || nchar(trimws(input$edit_name)) == 0) {
+        shiny::showNotification(
+          "Product name is required",
+          type = "error",
+          duration = 3
+        )
+        return()
+      }
+
+      # Update the product
+      updates <- list(
+        name = trimws(input$edit_name),
+        description = trimws(input$edit_description),
+        type = input$edit_type,
+        department = trimws(input$edit_department),
+        team = trimws(input$edit_team)
+      )
+
+      result <- product_repo$update(product_id(), updates)
+
+      if (!is.null(result) && result > 0) {
+        shiny::showNotification(
+          "Product updated successfully",
+          type = "message",
+          duration = 3
+        )
+
+        # Refresh the product data
+        rv$refresh_trigger <- rv$refresh_trigger + 1
+
+        # Close the modal
+        shiny::removeModal()
+      } else {
+        shiny::showNotification(
+          "Error updating product",
+          type = "error",
+          duration = 3
+        )
+      }
     })
 
     # Governance approval button

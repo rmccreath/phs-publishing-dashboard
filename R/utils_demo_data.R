@@ -346,8 +346,8 @@ MockDashboardRepository <- R6::R6Class(
         team = dashboard_data$team %||% "Not specified",
 
         # New workflow fields
-        lifecycle_stage = dashboard_data$lifecycle_stage %||% "approved",
-        current_status = dashboard_data$current_status %||% "awaiting_development",
+        lifecycle_stage = dashboard_data$lifecycle_stage %||% "awaiting_approval",
+        current_status = dashboard_data$current_status %||% "awaiting_approval",
 
         # User/ownership
         created_by = dashboard_data$created_by %||% "demo.user",
@@ -501,8 +501,43 @@ MockApprovalRepository <- R6::R6Class(
     },
 
     create = function(approval_data) {
-      message("Demo mode: Approval created")
-      paste0("approval-", nrow(private$data) + 1)
+      new_id <- paste0("approval-", nrow(private$data) + 1)
+
+      # Create new approval row
+      new_row <- tibble::tibble(
+        approval_id = new_id,
+        dashboard_id = approval_data$dashboard_id,
+        dashboard_name = approval_data$dashboard_name,
+        submitted_by = approval_data$submitted_by,
+        submitted_by_name = approval_data$submitted_by_name,
+        submitted_at = Sys.time(),
+        business_justification = approval_data$business_justification %||% "",
+        target_audience = approval_data$target_audience %||% "",
+        data_sources = approval_data$data_sources %||% "",
+        update_schedule = approval_data$update_schedule %||% "",
+        support_plan = approval_data$support_plan %||% "",
+        status = approval_data$status %||% "pending",
+        reviewed_by = NA_character_,
+        reviewed_at = as.POSIXct(NA),
+        review_notes = NA_character_,
+        governance_signoff = FALSE,
+        governance_signoff_by = NA_character_,
+        governance_signoff_at = as.POSIXct(NA),
+        technical_signoff = FALSE,
+        technical_signoff_by = NA_character_,
+        technical_signoff_at = as.POSIXct(NA),
+        security_signoff = FALSE,
+        security_signoff_by = NA_character_,
+        security_signoff_at = as.POSIXct(NA),
+        metadata = I(list(list())),
+        created_at = Sys.time(),
+        updated_at = Sys.time()
+      )
+
+      # Add to data
+      private$data <- dplyr::bind_rows(private$data, new_row)
+      message("Demo mode: Approval created with ID ", new_id)
+      new_id
     },
 
     update_status = function(approval_id, status, reviewed_by, review_notes = NULL) {
