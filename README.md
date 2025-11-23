@@ -40,35 +40,57 @@ A centralized governance dashboard for tracking, monitoring, and reporting on da
 - **Owner**: Manage own dashboards
 - **Viewer**: Read-only access to summaries
 
-## 🚀 Getting Started
+## 🚀 Quick Start (Demo Mode)
 
-### Prerequisites
+**Fastest way to run the application without a database:**
 
-- R >= 4.3.0
-- PostgreSQL >= 14
-- Access to Posit Connect (optional)
-- GitHub personal access token
-- ShinyApps.io credentials (optional)
+```r
+# 1. Clean install (if package is corrupted or first time)
+source('clean_reinstall.R')
 
-### Quick Start (Demo Mode - No Database Required!)
-
-**Option 1: One-line launcher**
-```bash
-Rscript run_demo.R
+# 2. Run in demo mode
+source('run_demo.R')
 ```
 
-**Option 2: R Console**
-```r
-# Clean install (if you had installation errors)
-source("INSTALL.R")
+That's it! The app will launch with 25 sample products.
 
-# Run in demo mode
-library(phsgovernance)
+---
+
+## 🔧 Troubleshooting
+
+**Package corrupted error?**
+```r
+source('clean_reinstall.R')
+```
+
+**Products not loading?**
+```r
+# Make sure demo mode is set BEFORE loading package
 Sys.setenv(DEMO_MODE = "true")
+library(phsgovernance)
 run_app()
 ```
 
-**Option 3: Full Setup with Database**
+**See [TROUBLESHOOTING.md](TROUBLESHOOTING.md) for complete guide.**
+
+---
+
+## 📋 Prerequisites
+
+### For Demo Mode (Development/Testing)
+- R >= 4.1.0
+- Required packages (auto-installed by scripts)
+
+### For Production Mode
+- R >= 4.3.0
+- PostgreSQL >= 14
+- Access to Posit Connect (optional)
+- GitHub personal access token (optional)
+- ShinyApps.io credentials (optional)
+
+---
+
+## 🏗️ Full Installation (with Database)
 
 See [`docs/QUICKSTART.md`](docs/QUICKSTART.md) for database setup instructions.
 
