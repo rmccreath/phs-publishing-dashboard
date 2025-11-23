@@ -270,33 +270,38 @@ mod_product_list_server <- function(id, product_repo, user) {
       req(products())
       req(nrow(products()) > 0)
 
-      data <- products() %>%
+      # Store full data for row selection
+      full_data <- products()
+
+      # Prepare display data
+      data <- full_data %>%
+        dplyr::mutate(
+          Type_Display = dplyr::case_when(
+            type == "shiny_dashboard" ~ "Shiny Dashboard",
+            type == "quarto_report" ~ "Quarto Report",
+            type == "dash_app" ~ "Dash App",
+            type == "api_service" ~ "API Service",
+            TRUE ~ tools::toTitleCase(type)
+          ),
+          Stage_Display = dplyr::case_when(
+            lifecycle_stage == "approved" ~ "Approved",
+            lifecycle_stage == "in_development" ~ "In Development",
+            lifecycle_stage == "in_audit" ~ "In Audit",
+            lifecycle_stage == "deployed" ~ "Deployed",
+            lifecycle_stage == "archived" ~ "Archived",
+            TRUE ~ tools::toTitleCase(lifecycle_stage)
+          ),
+          Status_Display = tools::toTitleCase(gsub("_", " ", current_status %||% ""))
+        ) %>%
         dplyr::select(
+          product_id,  # Keep for row selection
           Name = name,
-          Type = type,
+          Type = Type_Display,
           Department = department,
           Team = team,
-          Stage = lifecycle_stage,
-          Status = current_status,
+          Stage = Stage_Display,
+          Status = Status_Display,
           Created = created_at
-        ) %>%
-        dplyr::mutate(
-          Type = dplyr::case_when(
-            Type == "shiny_dashboard" ~ "Shiny Dashboard",
-            Type == "quarto_report" ~ "Quarto Report",
-            Type == "dash_app" ~ "Dash App",
-            Type == "api_service" ~ "API Service",
-            TRUE ~ tools::toTitleCase(Type)
-          ),
-          Stage = dplyr::case_when(
-            Stage == "approved" ~ "Approved",
-            Stage == "in_development" ~ "In Development",
-            Stage == "in_audit" ~ "In Audit",
-            Stage == "deployed" ~ "Deployed",
-            Stage == "archived" ~ "Archived",
-            TRUE ~ tools::toTitleCase(Stage)
-          ),
-          Status = tools::toTitleCase(gsub("_", " ", Status %||% ""))
         )
 
       DT::datatable(
@@ -306,7 +311,10 @@ mod_product_list_server <- function(id, product_repo, user) {
           searchHighlight = TRUE,
           dom = 'Bfrtip',
           buttons = c('copy', 'csv', 'excel'),
-          order = list(list(6, 'desc')) # Sort by Created descending
+          order = list(list(7, 'desc')), # Sort by Created descending (adjusted for hidden column)
+          columnDefs = list(
+            list(visible = FALSE, targets = 0)  # Hide product_id column
+          )
         ),
         selection = 'single',
         class = "display compact stripe hover",
@@ -326,10 +334,16 @@ mod_product_list_server <- function(id, product_repo, user) {
     observeEvent(input$product_table_rows_selected, {
       req(input$product_table_rows_selected)
       selected_row <- input$product_table_rows_selected
-      product_id <- products()[selected_row, ]$product_id
 
-      # Navigate to product detail page
-      shiny.router::change_page(paste0("/product?id=", product_id))
+      # Get product data
+      prod_data <- products()
+      if (!is.null(prod_data) && nrow(prod_data) >= selected_row) {
+        product_id <- prod_data[selected_row, ]$product_id
+        if (!is.null(product_id) && nchar(product_id) > 0) {
+          # Navigate to product detail page
+          shiny.router::change_page(paste0("/product?id=", product_id))
+        }
+      }
     })
 
     # Navigate to approval submission

@@ -160,19 +160,36 @@ mod_product_detail_server <- function(id, product_repo, approval_repo, audit_rep
     # Load product data
     product <- reactive({
       req(product_id())
-      product_repo$get_by_id(product_id())
+      result <- product_repo$get_by_id(product_id())
+
+      # Validate result
+      if (is.null(result) || nrow(result) == 0) {
+        return(NULL)
+      }
+
+      result
     })
 
     # Load approval data
     approval <- reactive({
       req(product_id())
-      approval_repo$get_by_product_id(product_id())
+      if (is.null(approval_repo)) {
+        return(NULL)
+      }
+      result <- approval_repo$get_by_product_id(product_id())
+
+      # Can be NULL or empty, that's okay
+      result
     })
 
     # Breadcrumbs
     output$breadcrumbs <- renderUI({
-      req(product())
-      product_breadcrumbs(product()$name)
+      prod <- product()
+      req(prod)
+      req(nrow(prod) > 0)
+
+      prod_name <- as.character(prod$name[1])
+      product_breadcrumbs(prod_name)
     })
 
     # Action buttons (conditional on permissions)
@@ -210,27 +227,34 @@ mod_product_detail_server <- function(id, product_repo, approval_repo, audit_rep
 
     # Product header outputs
     output$product_name <- renderText({
-      req(product())
-      as.character(product()$name %||% "Unknown Product")
+      prod <- product()
+      req(prod)
+      req(nrow(prod) > 0)
+      as.character(prod$name[1] %||% "Unknown Product")
     })
 
     output$product_description <- renderText({
-      req(product())
-      as.character(product()$description %||% "No description available")
+      prod <- product()
+      req(prod)
+      req(nrow(prod) > 0)
+      as.character(prod$description[1] %||% "No description available")
     })
 
     output$product_type <- renderText({
-      req(product())
+      prod <- product()
+      req(prod)
+      req(nrow(prod) > 0)
+
       type_labels <- c(
         shiny_dashboard = "Shiny Dashboard",
         quarto_report = "Quarto Report",
         dash_app = "Dash Application",
         api_service = "API Service"
       )
-      prod_type <- product()$type
-      result <- if (!is.null(prod_type) && prod_type %in% names(type_labels)) {
+      prod_type <- prod$type[1]
+      result <- if (!is.null(prod_type) && length(prod_type) > 0 && prod_type %in% names(type_labels)) {
         type_labels[[prod_type]]
-      } else if (!is.null(prod_type)) {
+      } else if (!is.null(prod_type) && length(prod_type) > 0) {
         tools::toTitleCase(as.character(prod_type))
       } else {
         "Not specified"
@@ -239,18 +263,24 @@ mod_product_detail_server <- function(id, product_repo, approval_repo, audit_rep
     })
 
     output$product_department <- renderText({
-      req(product())
-      as.character(product()$department %||% "Not specified")
+      prod <- product()
+      req(prod)
+      req(nrow(prod) > 0)
+      as.character(prod$department[1] %||% "Not specified")
     })
 
     output$product_team <- renderText({
-      req(product())
-      as.character(product()$team %||% "Not specified")
+      prod <- product()
+      req(prod)
+      req(nrow(prod) > 0)
+      as.character(prod$team[1] %||% "Not specified")
     })
 
     output$product_stage_badge <- renderUI({
-      req(product())
-      stage <- product()$lifecycle_stage
+      prod <- product()
+      req(prod)
+      req(nrow(prod) > 0)
+      stage <- prod$lifecycle_stage[1]
 
       color <- switch(stage,
         approved = "warning",
@@ -278,11 +308,16 @@ mod_product_detail_server <- function(id, product_repo, approval_repo, audit_rep
 
     # Timeline visualization
     output$timeline <- renderUI({
-      req(product())
+      p <- product()
+      req(p)
+      req(nrow(p) > 0)
 
       # Get approval status
       appr <- approval()
-      approval_complete <- !is.null(appr) && !is.null(appr$status) && appr$status == "approved"
+      approval_complete <- FALSE
+      if (!is.null(appr) && nrow(appr) > 0 && !is.null(appr$status)) {
+        approval_complete <- appr$status[1] == "approved"
+      }
 
       # Create timeline based on lifecycle stage
       stages <- list(
@@ -294,7 +329,7 @@ mod_product_detail_server <- function(id, product_repo, approval_repo, audit_rep
       )
 
       # Update status based on current stage and approval status
-      current_stage <- product()$lifecycle_stage
+      current_stage <- p$lifecycle_stage[1]
 
       # IMPORTANT: Development cannot start until approval is complete
       if (current_stage == "approved") {
@@ -364,18 +399,19 @@ mod_product_detail_server <- function(id, product_repo, approval_repo, audit_rep
 
     # Overview details
     output$overview_details <- renderUI({
-      req(product())
       p <- product()
+      req(p)
+      req(nrow(p) > 0)
 
       shiny::tagList(
-        shiny::p(shiny::strong("Created:"), format(p$created_at, "%Y-%m-%d %H:%M")),
-        shiny::p(shiny::strong("Last Updated:"), format(p$updated_at, "%Y-%m-%d %H:%M")),
-        shiny::p(shiny::strong("Current Status:"), p$current_status %||% "N/A"),
-        if (!is.null(p$tags) && length(p$tags) > 0) {
+        shiny::p(shiny::strong("Created:"), as.character(format(p$created_at[1], "%Y-%m-%d %H:%M"))),
+        shiny::p(shiny::strong("Last Updated:"), as.character(format(p$updated_at[1], "%Y-%m-%d %H:%M"))),
+        shiny::p(shiny::strong("Current Status:"), as.character(p$current_status[1] %||% "N/A")),
+        if (!is.null(p$tags[[1]]) && length(p$tags[[1]]) > 0) {
           shiny::p(
             shiny::strong("Tags:"),
             shiny::br(),
-            purrr::map(p$tags, ~ shiny::span(class = "badge bg-secondary me-1", .x))
+            purrr::map(p$tags[[1]], ~ shiny::span(class = "badge bg-secondary me-1", .x))
           )
         }
       )
@@ -394,8 +430,9 @@ mod_product_detail_server <- function(id, product_repo, approval_repo, audit_rep
       }
 
       # Check if user can approve
+      req(nrow(prod) > 0)
       can_approve <- has_permission(user(), "approve")
-      approval_complete <- !is.null(app$status) && app$status == "approved"
+      approval_complete <- !is.null(app$status[1]) && app$status[1] == "approved"
 
       shiny::tagList(
         # Overall status banner
@@ -420,22 +457,22 @@ mod_product_detail_server <- function(id, product_repo, approval_repo, audit_rep
             bslib::layout_columns(
               col_widths = c(6, 6),
               shiny::div(
-                shiny::p(shiny::strong("Submitted by:"), app$submitted_by_name %||% "Unknown"),
-                shiny::p(shiny::strong("Submitted at:"), as.character(format(app$submitted_at, "%Y-%m-%d %H:%M")))
+                shiny::p(shiny::strong("Submitted by:"), as.character(app$submitted_by_name[1] %||% "Unknown")),
+                shiny::p(shiny::strong("Submitted at:"), as.character(format(app$submitted_at[1], "%Y-%m-%d %H:%M")))
               ),
               shiny::div(
-                shiny::p(shiny::strong("Product Type:"), prod$type %||% "Unknown"),
-                shiny::p(shiny::strong("Department:"), prod$department %||% "Unknown"),
-                shiny::p(shiny::strong("Team:"), prod$team %||% "Unknown")
+                shiny::p(shiny::strong("Product Type:"), as.character(prod$type[1] %||% "Unknown")),
+                shiny::p(shiny::strong("Department:"), as.character(prod$department[1] %||% "Unknown")),
+                shiny::p(shiny::strong("Team:"), as.character(prod$team[1] %||% "Unknown"))
               )
             ),
             shiny::hr(),
             shiny::h6("Business Justification"),
-            shiny::p(app$business_justification %||% "Not provided"),
+            shiny::p(as.character(app$business_justification[1] %||% "Not provided")),
             shiny::h6("Target Audience"),
-            shiny::p(app$target_audience %||% "Not provided"),
+            shiny::p(as.character(app$target_audience[1] %||% "Not provided")),
             shiny::h6("Data Sources"),
-            shiny::p(app$data_sources %||% "Not provided")
+            shiny::p(as.character(app$data_sources[1] %||% "Not provided"))
           )
         ),
 
@@ -449,7 +486,7 @@ mod_product_detail_server <- function(id, product_repo, approval_repo, audit_rep
               shiny::div(
                 class = "d-flex justify-content-between align-items-center mb-2",
                 shiny::h6("1. Governance Review", class = "mb-0"),
-                if (app$governance_signoff) {
+                if (!is.null(app$governance_signoff[1]) && app$governance_signoff[1]) {
                   shiny::span(class = "badge bg-success", shiny::icon("check"), " Approved")
                 } else {
                   shiny::span(class = "badge bg-warning", shiny::icon("clock"), " Pending")
@@ -459,17 +496,17 @@ mod_product_detail_server <- function(id, product_repo, approval_repo, audit_rep
                 class = "text-muted small",
                 "Reviews business case, strategic alignment, and governance compliance"
               ),
-              if (can_approve && !app$governance_signoff) {
+              if (can_approve && (is.null(app$governance_signoff[1]) || !app$governance_signoff[1])) {
                 shiny::actionButton(
                   ns("btn_approve_governance"),
                   "Approve Governance",
                   class = "btn-success btn-sm",
                   icon = shiny::icon("check")
                 )
-              } else if (app$governance_signoff) {
+              } else if (!is.null(app$governance_signoff[1]) && app$governance_signoff[1]) {
                 shiny::div(
                   class = "small text-success",
-                  "Approved by: ", app$governance_signoff_by %||% "System"
+                  "Approved by: ", as.character(app$governance_signoff_by[1] %||% "System")
                 )
               }
             ),
@@ -480,7 +517,7 @@ mod_product_detail_server <- function(id, product_repo, approval_repo, audit_rep
               shiny::div(
                 class = "d-flex justify-content-between align-items-center mb-2",
                 shiny::h6("2. Technical Review", class = "mb-0"),
-                if (app$technical_signoff) {
+                if (!is.null(app$technical_signoff[1]) && app$technical_signoff[1]) {
                   shiny::span(class = "badge bg-success", shiny::icon("check"), " Approved")
                 } else {
                   shiny::span(class = "badge bg-warning", shiny::icon("clock"), " Pending")
@@ -490,17 +527,17 @@ mod_product_detail_server <- function(id, product_repo, approval_repo, audit_rep
                 class = "text-muted small",
                 "Reviews technical feasibility, architecture, and resource requirements"
               ),
-              if (can_approve && !app$technical_signoff) {
+              if (can_approve && (is.null(app$technical_signoff[1]) || !app$technical_signoff[1])) {
                 shiny::actionButton(
                   ns("btn_approve_technical"),
                   "Approve Technical",
                   class = "btn-success btn-sm",
                   icon = shiny::icon("check")
                 )
-              } else if (app$technical_signoff) {
+              } else if (!is.null(app$technical_signoff[1]) && app$technical_signoff[1]) {
                 shiny::div(
                   class = "small text-success",
-                  "Approved by: ", app$technical_signoff_by %||% "System"
+                  "Approved by: ", as.character(app$technical_signoff_by[1] %||% "System")
                 )
               }
             ),
@@ -511,7 +548,7 @@ mod_product_detail_server <- function(id, product_repo, approval_repo, audit_rep
               shiny::div(
                 class = "d-flex justify-content-between align-items-center mb-2",
                 shiny::h6("3. Security Review", class = "mb-0"),
-                if (app$security_signoff) {
+                if (!is.null(app$security_signoff[1]) && app$security_signoff[1]) {
                   shiny::span(class = "badge bg-success", shiny::icon("check"), " Approved")
                 } else {
                   shiny::span(class = "badge bg-warning", shiny::icon("clock"), " Pending")
@@ -521,17 +558,17 @@ mod_product_detail_server <- function(id, product_repo, approval_repo, audit_rep
                 class = "text-muted small",
                 "Reviews data security, access controls, and compliance requirements"
               ),
-              if (can_approve && !app$security_signoff) {
+              if (can_approve && (is.null(app$security_signoff[1]) || !app$security_signoff[1])) {
                 shiny::actionButton(
                   ns("btn_approve_security"),
                   "Approve Security",
                   class = "btn-success btn-sm",
                   icon = shiny::icon("check")
                 )
-              } else if (app$security_signoff) {
+              } else if (!is.null(app$security_signoff[1]) && app$security_signoff[1]) {
                 shiny::div(
                   class = "small text-success",
-                  "Approved by: ", app$security_signoff_by %||% "System"
+                  "Approved by: ", as.character(app$security_signoff_by[1] %||% "System")
                 )
               }
             )
@@ -581,6 +618,42 @@ mod_product_detail_server <- function(id, product_repo, approval_repo, audit_rep
     observeEvent(input$btn_flag_review, {
       shiny::showNotification(
         "Product flagged for review. This will be functional in Phase 4.",
+        type = "message",
+        duration = 3
+      )
+    })
+
+    # Edit button
+    observeEvent(input$btn_edit, {
+      shiny::showNotification(
+        "Edit functionality will be implemented in future phases.",
+        type = "info",
+        duration = 3
+      )
+    })
+
+    # Governance approval button
+    observeEvent(input$btn_approve_governance, {
+      shiny::showNotification(
+        "Governance approval recorded. (Demo mode - changes not persisted)",
+        type = "message",
+        duration = 3
+      )
+    })
+
+    # Technical approval button
+    observeEvent(input$btn_approve_technical, {
+      shiny::showNotification(
+        "Technical approval recorded. (Demo mode - changes not persisted)",
+        type = "message",
+        duration = 3
+      )
+    })
+
+    # Security approval button
+    observeEvent(input$btn_approve_security, {
+      shiny::showNotification(
+        "Security approval recorded. (Demo mode - changes not persisted)",
         type = "message",
         duration = 3
       )
