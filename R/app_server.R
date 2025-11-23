@@ -74,7 +74,7 @@ app_server <- function(input, output, session) {
 
   approval_repo <- if (demo_mode) {
     tryCatch({
-      repo <- MockApprovalRepository$new()
+      repo <- MockApprovalRepository$new(dashboard_repo = dashboard_repo)
       log_message(paste("Created MockApprovalRepository with", nrow(repo$get_all()), "approvals"), "INFO")
       repo
     }, error = function(e) {

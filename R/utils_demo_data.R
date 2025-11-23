@@ -175,8 +175,8 @@ generate_sample_dashboards <- function() {
     security_score = ifelse(lifecycle_stages == "deployed", round(runif(n, 70, 100), 1), NA_real_),
 
     # Timestamps
-    created_at = as.POSIXct(Sys.Date() - sample(30:730, n, replace = TRUE)),
-    updated_at = as.POSIXct(Sys.Date() - sample(1:30, n, replace = TRUE))
+    created_at = Sys.time() - (sample(30:730, n, replace = TRUE) * 86400),
+    updated_at = Sys.time() - (sample(1:30, n, replace = TRUE) * 86400)
   )
 }
 
@@ -185,16 +185,24 @@ generate_sample_dashboards <- function() {
 #' @return Data frame of sample approvals
 #' @export
 generate_sample_approvals <- function() {
-  # Generate approvals for 20 products (80% coverage) using sequential IDs
-  n <- 20
+  # Generate approvals for ALL 25 products to match dashboard count
+  n <- 25
+
+  # Create base timestamps
+  current_time <- Sys.time()
+
+  # Generate timestamps as POSIXct vectors
+  reviewed_at_vec <- rep(as.POSIXct(NA), n)
+  has_review <- runif(n) > 0.5
+  reviewed_at_vec[has_review] <- current_time - (sample(1:15, sum(has_review), replace = TRUE) * 86400)
 
   tibble::tibble(
     approval_id = paste0("approval-", 1:n),
-    dashboard_id = paste0("prod-", 1:n),  # Sequential IDs for first 20 products
+    dashboard_id = paste0("prod-", 1:n),  # Match all 25 products
     dashboard_name = paste("Product", 1:n),
     submitted_by = paste0("user-", sample(1:5, n, replace = TRUE)),
     submitted_by_name = sample(c("Alice Smith", "Bob Jones", "Carol White"), n, replace = TRUE),
-    submitted_at = as.POSIXct(Sys.Date() - sample(1:30, n, replace = TRUE)),
+    submitted_at = current_time - (sample(1:30, n, replace = TRUE) * 86400),
     business_justification = paste(
       "This dashboard is needed to provide stakeholders with timely insights into",
       sample(c("service performance", "patient outcomes", "operational efficiency"), n, replace = TRUE)
@@ -203,22 +211,24 @@ generate_sample_approvals <- function() {
     data_sources = "NHS Scotland data warehouse, Public Health Scotland datasets",
     update_schedule = sample(c("daily", "weekly", "monthly"), n, replace = TRUE),
     support_plan = "Maintained by the Analytics team with on-call support",
-    status = sample(c("pending", "under_review", "approved", "rejected", "requires_changes"), n, replace = TRUE, prob = c(0.3, 0.2, 0.3, 0.1, 0.1)),
-    reviewed_by = ifelse(runif(n) > 0.5, paste0("user-", sample(1:2, n, replace = TRUE)), NA_character_),
-    reviewed_at = as.POSIXct(ifelse(runif(n) > 0.5, Sys.Date() - sample(1:15, n, replace = TRUE), NA)),
+    # Status will be set based on product lifecycle_stage - using pending as default for now
+    status = "pending",
+    reviewed_by = ifelse(has_review, paste0("user-", sample(1:2, n, replace = TRUE)), NA_character_),
+    reviewed_at = reviewed_at_vec,
     review_notes = ifelse(runif(n) > 0.7, "Please update documentation", NA_character_),
-    governance_signoff = runif(n) > 0.6,
+    # Sign-offs default to FALSE - will be set based on lifecycle stage
+    governance_signoff = FALSE,
     governance_signoff_by = NA_character_,
     governance_signoff_at = as.POSIXct(NA),
-    technical_signoff = runif(n) > 0.7,
+    technical_signoff = FALSE,
     technical_signoff_by = NA_character_,
     technical_signoff_at = as.POSIXct(NA),
-    security_signoff = runif(n) > 0.8,
+    security_signoff = FALSE,
     security_signoff_by = NA_character_,
     security_signoff_at = as.POSIXct(NA),
     metadata = I(lapply(1:n, function(x) list())),
-    created_at = as.POSIXct(Sys.Date() - sample(30:60, n, replace = TRUE)),
-    updated_at = as.POSIXct(Sys.Date() - sample(1:30, n, replace = TRUE))
+    created_at = current_time - (sample(30:60, n, replace = TRUE) * 86400),
+    updated_at = current_time - (sample(1:30, n, replace = TRUE) * 86400)
   )
 }
 
@@ -461,7 +471,7 @@ MockApprovalRepository <- R6::R6Class(
   ),
 
   public = list(
-    initialize = function() {
+    initialize = function(dashboard_repo = NULL) {
       # Try to load saved demo data first
       saved_data <- load_demo_data("approvals.rds")
 
@@ -471,6 +481,38 @@ MockApprovalRepository <- R6::R6Class(
       } else {
         private$data <- generate_sample_approvals()
         message("Generated ", nrow(private$data), " sample approvals")
+
+        # If dashboard_repo provided, align approval statuses with product lifecycle stages
+        if (!is.null(dashboard_repo)) {
+          dashboards <- dashboard_repo$get_all()
+          if (!is.null(dashboards) && nrow(dashboards) > 0) {
+            for (i in 1:nrow(private$data)) {
+              product_id <- private$data$dashboard_id[i]
+              dashboard <- dplyr::filter(dashboards, .data$product_id == product_id | .data$dashboard_id == product_id)
+
+              if (nrow(dashboard) > 0) {
+                stage <- dashboard$lifecycle_stage[1]
+
+                # Set approval status based on lifecycle stage
+                if (stage == "awaiting_approval") {
+                  # Randomly assign pending or under_review
+                  private$data$status[i] <- sample(c("pending", "under_review"), 1, prob = c(0.6, 0.4))
+                } else if (stage %in% c("in_development", "in_audit", "deployed", "archived")) {
+                  # These stages require approved status
+                  private$data$status[i] <- "approved"
+                  # Set all sign-offs to complete
+                  private$data$governance_signoff[i] <- TRUE
+                  private$data$governance_signoff_by[i] <- "System Admin"
+                  private$data$technical_signoff[i] <- TRUE
+                  private$data$technical_signoff_by[i] <- "Tech Lead"
+                  private$data$security_signoff[i] <- TRUE
+                  private$data$security_signoff_by[i] <- "Security Officer"
+                }
+              }
+            }
+            message("Aligned approval statuses with product lifecycle stages")
+          }
+        }
       }
     },
 
