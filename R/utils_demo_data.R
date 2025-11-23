@@ -402,7 +402,7 @@ MockDashboardRepository <- R6::R6Class(
       }
 
       # Update timestamp
-      private$data$updated_at[row_idx[1]] <- Sys.time()
+      private$data$updated_at[row_idx[1]] <- as.POSIXct(Sys.time())
 
       message("Demo mode: Updated product ", dashboard_id)
       1
@@ -421,7 +421,7 @@ MockDashboardRepository <- R6::R6Class(
       # Update lifecycle stage and status
       private$data$lifecycle_stage[row_idx[1]] <- new_stage
       private$data$current_status[row_idx[1]] <- new_status
-      private$data$updated_at[row_idx[1]] <- Sys.time()
+      private$data$updated_at[row_idx[1]] <- as.POSIXct(Sys.time())
 
       message("Demo mode: Product ", product_id, " moved to ", new_stage)
       TRUE
@@ -478,7 +478,18 @@ MockApprovalRepository <- R6::R6Class(
       data <- private$data
 
       if (!is.null(filters$status)) {
-        data <- dplyr::filter(data, status == filters$status)
+        status_val <- filters$status
+        data <- dplyr::filter(data, .data$status == status_val)
+      }
+
+      if (!is.null(filters$dashboard_id)) {
+        dashboard_ids <- filters$dashboard_id
+        data <- dplyr::filter(data, .data$dashboard_id %in% dashboard_ids)
+      }
+
+      if (!is.null(filters$submitted_by)) {
+        submitted_by_val <- filters$submitted_by
+        data <- dplyr::filter(data, .data$submitted_by == submitted_by_val)
       }
 
       data
@@ -510,7 +521,7 @@ MockApprovalRepository <- R6::R6Class(
         dashboard_name = approval_data$dashboard_name,
         submitted_by = approval_data$submitted_by,
         submitted_by_name = approval_data$submitted_by_name,
-        submitted_at = Sys.time(),
+        submitted_at = as.POSIXct(Sys.time()),
         business_justification = approval_data$business_justification %||% "",
         target_audience = approval_data$target_audience %||% "",
         data_sources = approval_data$data_sources %||% "",
@@ -530,8 +541,8 @@ MockApprovalRepository <- R6::R6Class(
         security_signoff_by = NA_character_,
         security_signoff_at = as.POSIXct(NA),
         metadata = I(list(list())),
-        created_at = Sys.time(),
-        updated_at = Sys.time()
+        created_at = as.POSIXct(Sys.time()),
+        updated_at = as.POSIXct(Sys.time())
       )
 
       # Add to data
@@ -564,15 +575,15 @@ MockApprovalRepository <- R6::R6Class(
       if (signoff_type == "governance") {
         private$data$governance_signoff[row_idx[1]] <- TRUE
         private$data$governance_signoff_by[row_idx[1]] <- user_name
-        private$data$governance_signoff_at[row_idx[1]] <- Sys.time()
+        private$data$governance_signoff_at[row_idx[1]] <- as.POSIXct(Sys.time())
       } else if (signoff_type == "technical") {
         private$data$technical_signoff[row_idx[1]] <- TRUE
         private$data$technical_signoff_by[row_idx[1]] <- user_name
-        private$data$technical_signoff_at[row_idx[1]] <- Sys.time()
+        private$data$technical_signoff_at[row_idx[1]] <- as.POSIXct(Sys.time())
       } else if (signoff_type == "security") {
         private$data$security_signoff[row_idx[1]] <- TRUE
         private$data$security_signoff_by[row_idx[1]] <- user_name
-        private$data$security_signoff_at[row_idx[1]] <- Sys.time()
+        private$data$security_signoff_at[row_idx[1]] <- as.POSIXct(Sys.time())
       }
 
       # Check if all three sign-offs are complete
@@ -582,7 +593,7 @@ MockApprovalRepository <- R6::R6Class(
 
       if (all_complete) {
         private$data$status[row_idx[1]] <- "approved"
-        private$data$updated_at[row_idx[1]] <- Sys.time()
+        private$data$updated_at[row_idx[1]] <- as.POSIXct(Sys.time())
         message("All sign-offs complete for product: ", product_id)
       }
 

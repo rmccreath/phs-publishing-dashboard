@@ -432,7 +432,8 @@ mod_product_detail_server <- function(id, product_repo, approval_repo, audit_rep
       if (is.null(app) || nrow(app) == 0) {
         return(shiny::div(
           class = "alert alert-info",
-          "No approval record found for this product."
+          shiny::icon("info-circle"),
+          " No approval record found for this product."
         ))
       }
 
@@ -441,141 +442,223 @@ mod_product_detail_server <- function(id, product_repo, approval_repo, audit_rep
       can_approve <- has_permission(user(), "approve")
       approval_complete <- !is.null(app$status[1]) && app$status[1] == "approved"
 
+      # Get sign-off status
+      gov_approved <- !is.null(app$governance_signoff[1]) && isTRUE(app$governance_signoff[1])
+      tech_approved <- !is.null(app$technical_signoff[1]) && isTRUE(app$technical_signoff[1])
+      sec_approved <- !is.null(app$security_signoff[1]) && isTRUE(app$security_signoff[1])
+
       shiny::tagList(
         # Overall status banner
         if (approval_complete) {
           shiny::div(
-            class = "alert alert-success",
-            shiny::icon("check-circle"),
-            " This product has been fully approved and is ready for development."
+            class = "alert alert-success d-flex align-items-center",
+            shiny::icon("check-circle", class = "me-2"),
+            shiny::div(
+              shiny::strong("Approval Complete"), shiny::br(),
+              "All three sign-offs have been completed. This product is ready for development."
+            )
           )
         } else {
           shiny::div(
-            class = "alert alert-warning",
-            shiny::icon("hourglass-split"),
-            " Approval in progress. All sections must be approved before development can begin."
+            class = "alert alert-warning d-flex align-items-center",
+            shiny::icon("hourglass-split", class = "me-2"),
+            shiny::div(
+              shiny::strong("Approval In Progress"), shiny::br(),
+              sprintf("%d of 3 sign-offs completed. All sections must be approved before development can begin.",
+                      sum(gov_approved, tech_approved, sec_approved))
+            )
           )
         },
 
-        # Submission Information
+        # Submission Details Card
         bslib::card(
-          bslib::card_header("Submission Information"),
+          bslib::card_header(
+            class = "bg-light",
+            shiny::strong("Submission Details")
+          ),
           bslib::card_body(
             bslib::layout_columns(
-              col_widths = c(6, 6),
+              col_widths = c(4, 4, 4),
               shiny::div(
-                shiny::p(shiny::strong("Submitted by:"), as.character(app$submitted_by_name[1] %||% "Unknown")),
-                shiny::p(shiny::strong("Submitted at:"), as.character(format(app$submitted_at[1], "%Y-%m-%d %H:%M")))
+                shiny::div(class = "text-muted small", "Submitted By"),
+                shiny::div(class = "fw-bold", as.character(app$submitted_by_name[1] %||% "Unknown"))
               ),
               shiny::div(
-                shiny::p(shiny::strong("Product Type:"), as.character(prod$type[1] %||% "Unknown")),
-                shiny::p(shiny::strong("Department:"), as.character(prod$department[1] %||% "Unknown")),
-                shiny::p(shiny::strong("Team:"), as.character(prod$team[1] %||% "Unknown"))
+                shiny::div(class = "text-muted small", "Submitted On"),
+                shiny::div(class = "fw-bold", as.character(format(app$submitted_at[1], "%d %b %Y %H:%M")))
+              ),
+              shiny::div(
+                shiny::div(class = "text-muted small", "Product Type"),
+                shiny::div(class = "fw-bold", as.character(prod$type[1] %||% "Unknown"))
               )
             ),
             shiny::hr(),
-            shiny::h6("Business Justification"),
-            shiny::p(as.character(app$business_justification[1] %||% "Not provided")),
-            shiny::h6("Target Audience"),
-            shiny::p(as.character(app$target_audience[1] %||% "Not provided")),
-            shiny::h6("Data Sources"),
-            shiny::p(as.character(app$data_sources[1] %||% "Not provided"))
+
+            # Business Justification
+            shiny::div(
+              class = "mb-3",
+              shiny::div(class = "text-muted small fw-bold mb-1", "Business Justification"),
+              shiny::div(as.character(app$business_justification[1] %||% "Not provided"))
+            ),
+
+            # Target Audience
+            shiny::div(
+              class = "mb-3",
+              shiny::div(class = "text-muted small fw-bold mb-1", "Target Audience"),
+              shiny::div(as.character(app$target_audience[1] %||% "Not provided"))
+            ),
+
+            # Data Sources
+            shiny::div(
+              class = "mb-3",
+              shiny::div(class = "text-muted small fw-bold mb-1", "Data Sources"),
+              shiny::div(as.character(app$data_sources[1] %||% "Not provided"))
+            ),
+
+            # Additional Details
+            bslib::layout_columns(
+              col_widths = c(6, 6),
+              shiny::div(
+                shiny::div(class = "text-muted small fw-bold mb-1", "Department"),
+                shiny::div(as.character(prod$department[1] %||% "Unknown"))
+              ),
+              shiny::div(
+                shiny::div(class = "text-muted small fw-bold mb-1", "Team"),
+                shiny::div(as.character(prod$team[1] %||% "Unknown"))
+              )
+            )
           )
         ),
 
-        # Approval Sections (Guided Process)
+        # Sign-off Progress Card
         bslib::card(
-          bslib::card_header("Approval Checklist"),
+          bslib::card_header(
+            class = "bg-light",
+            shiny::strong("Approval Sign-offs")
+          ),
           bslib::card_body(
             # Governance Sign-off
             shiny::div(
-              class = "approval-section mb-4",
+              class = "border rounded p-3 mb-3",
+              style = if(gov_approved) "background-color: #d4edda;" else "background-color: #fff3cd;",
               shiny::div(
-                class = "d-flex justify-content-between align-items-center mb-2",
-                shiny::h6("1. Governance Review", class = "mb-0"),
-                if (!is.null(app$governance_signoff[1]) && app$governance_signoff[1]) {
-                  shiny::span(class = "badge bg-success", shiny::icon("check"), " Approved")
+                class = "d-flex justify-content-between align-items-start mb-2",
+                shiny::div(
+                  shiny::h6(
+                    class = "mb-1",
+                    if(gov_approved) {
+                      shiny::span(shiny::icon("check-circle", class = "text-success me-1"), "Governance Review")
+                    } else {
+                      shiny::span(shiny::icon("circle", class = "text-warning me-1"), "Governance Review")
+                    }
+                  ),
+                  shiny::p(class = "text-muted small mb-0",
+                          "Reviews business case, strategic alignment, and governance compliance")
+                ),
+                if (gov_approved) {
+                  shiny::span(class = "badge bg-success", "Completed")
                 } else {
-                  shiny::span(class = "badge bg-warning", shiny::icon("clock"), " Pending")
+                  shiny::span(class = "badge bg-warning text-dark", "Pending")
                 }
               ),
-              shiny::p(
-                class = "text-muted small",
-                "Reviews business case, strategic alignment, and governance compliance"
-              ),
-              if (can_approve && (is.null(app$governance_signoff[1]) || !app$governance_signoff[1])) {
-                shiny::actionButton(
-                  ns("btn_approve_governance"),
-                  "Approve Governance",
-                  class = "btn-success btn-sm",
-                  icon = shiny::icon("check")
-                )
-              } else if (!is.null(app$governance_signoff[1]) && app$governance_signoff[1]) {
+              if (gov_approved) {
                 shiny::div(
-                  class = "small text-success",
-                  "Approved by: ", as.character(app$governance_signoff_by[1] %||% "System")
+                  class = "small text-muted mt-2",
+                  "Approved by: ", shiny::strong(as.character(app$governance_signoff_by[1] %||% "Unknown"))
+                )
+              } else if (can_approve) {
+                shiny::div(
+                  class = "mt-2",
+                  shiny::actionButton(
+                    ns("btn_approve_governance"),
+                    "Sign Off - Governance",
+                    class = "btn-success btn-sm",
+                    icon = shiny::icon("check")
+                  )
                 )
               }
             ),
 
             # Technical Sign-off
             shiny::div(
-              class = "approval-section mb-4",
+              class = "border rounded p-3 mb-3",
+              style = if(tech_approved) "background-color: #d4edda;" else "background-color: #fff3cd;",
               shiny::div(
-                class = "d-flex justify-content-between align-items-center mb-2",
-                shiny::h6("2. Technical Review", class = "mb-0"),
-                if (!is.null(app$technical_signoff[1]) && app$technical_signoff[1]) {
-                  shiny::span(class = "badge bg-success", shiny::icon("check"), " Approved")
+                class = "d-flex justify-content-between align-items-start mb-2",
+                shiny::div(
+                  shiny::h6(
+                    class = "mb-1",
+                    if(tech_approved) {
+                      shiny::span(shiny::icon("check-circle", class = "text-success me-1"), "Technical Review")
+                    } else {
+                      shiny::span(shiny::icon("circle", class = "text-warning me-1"), "Technical Review")
+                    }
+                  ),
+                  shiny::p(class = "text-muted small mb-0",
+                          "Reviews technical feasibility, architecture, and resource requirements")
+                ),
+                if (tech_approved) {
+                  shiny::span(class = "badge bg-success", "Completed")
                 } else {
-                  shiny::span(class = "badge bg-warning", shiny::icon("clock"), " Pending")
+                  shiny::span(class = "badge bg-warning text-dark", "Pending")
                 }
               ),
-              shiny::p(
-                class = "text-muted small",
-                "Reviews technical feasibility, architecture, and resource requirements"
-              ),
-              if (can_approve && (is.null(app$technical_signoff[1]) || !app$technical_signoff[1])) {
-                shiny::actionButton(
-                  ns("btn_approve_technical"),
-                  "Approve Technical",
-                  class = "btn-success btn-sm",
-                  icon = shiny::icon("check")
-                )
-              } else if (!is.null(app$technical_signoff[1]) && app$technical_signoff[1]) {
+              if (tech_approved) {
                 shiny::div(
-                  class = "small text-success",
-                  "Approved by: ", as.character(app$technical_signoff_by[1] %||% "System")
+                  class = "small text-muted mt-2",
+                  "Approved by: ", shiny::strong(as.character(app$technical_signoff_by[1] %||% "Unknown"))
+                )
+              } else if (can_approve) {
+                shiny::div(
+                  class = "mt-2",
+                  shiny::actionButton(
+                    ns("btn_approve_technical"),
+                    "Sign Off - Technical",
+                    class = "btn-success btn-sm",
+                    icon = shiny::icon("check")
+                  )
                 )
               }
             ),
 
             # Security Sign-off
             shiny::div(
-              class = "approval-section mb-4",
+              class = "border rounded p-3 mb-3",
+              style = if(sec_approved) "background-color: #d4edda;" else "background-color: #fff3cd;",
               shiny::div(
-                class = "d-flex justify-content-between align-items-center mb-2",
-                shiny::h6("3. Security Review", class = "mb-0"),
-                if (!is.null(app$security_signoff[1]) && app$security_signoff[1]) {
-                  shiny::span(class = "badge bg-success", shiny::icon("check"), " Approved")
+                class = "d-flex justify-content-between align-items-start mb-2",
+                shiny::div(
+                  shiny::h6(
+                    class = "mb-1",
+                    if(sec_approved) {
+                      shiny::span(shiny::icon("check-circle", class = "text-success me-1"), "Security Review")
+                    } else {
+                      shiny::span(shiny::icon("circle", class = "text-warning me-1"), "Security Review")
+                    }
+                  ),
+                  shiny::p(class = "text-muted small mb-0",
+                          "Reviews data security, access controls, and compliance requirements")
+                ),
+                if (sec_approved) {
+                  shiny::span(class = "badge bg-success", "Completed")
                 } else {
-                  shiny::span(class = "badge bg-warning", shiny::icon("clock"), " Pending")
+                  shiny::span(class = "badge bg-warning text-dark", "Pending")
                 }
               ),
-              shiny::p(
-                class = "text-muted small",
-                "Reviews data security, access controls, and compliance requirements"
-              ),
-              if (can_approve && (is.null(app$security_signoff[1]) || !app$security_signoff[1])) {
-                shiny::actionButton(
-                  ns("btn_approve_security"),
-                  "Approve Security",
-                  class = "btn-success btn-sm",
-                  icon = shiny::icon("check")
-                )
-              } else if (!is.null(app$security_signoff[1]) && app$security_signoff[1]) {
+              if (sec_approved) {
                 shiny::div(
-                  class = "small text-success",
-                  "Approved by: ", as.character(app$security_signoff_by[1] %||% "System")
+                  class = "small text-muted mt-2",
+                  "Approved by: ", shiny::strong(as.character(app$security_signoff_by[1] %||% "Unknown"))
+                )
+              } else if (can_approve) {
+                shiny::div(
+                  class = "mt-2",
+                  shiny::actionButton(
+                    ns("btn_approve_security"),
+                    "Sign Off - Security",
+                    class = "btn-success btn-sm",
+                    icon = shiny::icon("check")
+                  )
                 )
               }
             )

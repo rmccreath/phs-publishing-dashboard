@@ -22,7 +22,7 @@ mod_product_list_ui <- function(id) {
           "Lifecycle Stage",
           choices = c(
             "All" = "",
-            "Approved (Awaiting Development)" = "approved",
+            "Awaiting Approval" = "awaiting_approval",
             "In Development" = "in_development",
             "In Audit" = "in_audit",
             "Deployed" = "deployed",

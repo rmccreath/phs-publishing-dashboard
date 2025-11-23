@@ -444,15 +444,16 @@ mod_approval_workflow_server <- function(id, approval_repo, dashboard_repo, user
       shiny.router::change_page(paste0("/product?id=", product_id))
     })
 
-    # Handle row selection
+    # Handle row selection - navigate to product detail page
     observeEvent(input$pending_table_rows_selected, {
       req(input$pending_table_rows_selected)
 
       selected_row <- pending_approvals()[input$pending_table_rows_selected, ]
-      rv$selected_approval <- selected_row
 
-      # Switch to review tab
-      updateTabsetPanel(session, "workflow_tabs", selected = "Review")
+      if (!is.null(selected_row$dashboard_id) && nrow(selected_row) > 0) {
+        product_id <- selected_row$dashboard_id[1]
+        shiny.router::change_page(paste0("/product?id=", product_id))
+      }
     })
 
     # Check if approval is selected
