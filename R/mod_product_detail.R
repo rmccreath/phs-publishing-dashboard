@@ -26,18 +26,7 @@ mod_product_detail_ui <- function(id) {
           ),
           shiny::div(
             class = "btn-group",
-            shiny::actionButton(
-              ns("btn_flag_review"),
-              "Flag for Review",
-              icon = shiny::icon("flag"),
-              class = "btn-warning"
-            ),
-            shiny::actionButton(
-              ns("btn_edit"),
-              "Edit",
-              icon = shiny::icon("pencil"),
-              class = "btn-outline-primary"
-            )
+            shiny::uiOutput(ns("action_buttons"))
           )
         )
       ),
@@ -186,15 +175,48 @@ mod_product_detail_server <- function(id, product_repo, approval_repo, audit_rep
       product_breadcrumbs(product()$name)
     })
 
+    # Action buttons (conditional on permissions)
+    output$action_buttons <- renderUI({
+      buttons <- list()
+
+      # Flag for review - only admins can flag products
+      if (has_permission(user(), "approve")) {  # Admin permission
+        buttons[[length(buttons) + 1]] <- shiny::actionButton(
+          ns("btn_flag_review"),
+          "Flag for Review",
+          icon = shiny::icon("flag"),
+          class = "btn-warning"
+        )
+      }
+
+      # Edit button - admins and product owners
+      if (has_permission(user(), "approve") ||
+          (has_permission(user(), "submit") && !is.null(product()) &&
+           product()$owner_id == user()$user_id)) {
+        buttons[[length(buttons) + 1]] <- shiny::actionButton(
+          ns("btn_edit"),
+          "Edit",
+          icon = shiny::icon("pencil"),
+          class = "btn-outline-primary"
+        )
+      }
+
+      if (length(buttons) > 0) {
+        shiny::tagList(buttons)
+      } else {
+        NULL
+      }
+    })
+
     # Product header outputs
     output$product_name <- renderText({
       req(product())
-      product()$name
+      as.character(product()$name %||% "Unknown Product")
     })
 
     output$product_description <- renderText({
       req(product())
-      product()$description %||% "No description available"
+      as.character(product()$description %||% "No description available")
     })
 
     output$product_type <- renderText({
@@ -205,17 +227,25 @@ mod_product_detail_server <- function(id, product_repo, approval_repo, audit_rep
         dash_app = "Dash Application",
         api_service = "API Service"
       )
-      type_labels[[product()$type]] %||% tools::toTitleCase(product()$type)
+      prod_type <- product()$type
+      result <- if (!is.null(prod_type) && prod_type %in% names(type_labels)) {
+        type_labels[[prod_type]]
+      } else if (!is.null(prod_type)) {
+        tools::toTitleCase(as.character(prod_type))
+      } else {
+        "Not specified"
+      }
+      as.character(result)
     })
 
     output$product_department <- renderText({
       req(product())
-      product()$department %||% "Not specified"
+      as.character(product()$department %||% "Not specified")
     })
 
     output$product_team <- renderText({
       req(product())
-      product()$team %||% "Not specified"
+      as.character(product()$team %||% "Not specified")
     })
 
     output$product_stage_badge <- renderUI({
@@ -264,13 +294,18 @@ mod_product_detail_server <- function(id, product_repo, approval_repo, audit_rep
       stage_order <- c("approved", "in_development", "in_audit", "deployed")
       current_index <- which(stage_order == current_stage)
 
-      if (length(current_index) > 0) {
+      if (length(current_index) > 0 && current_index > 0) {
         # Mark stages as completed up to current
         for (i in seq_len(current_index)) {
-          stages[[i]]$status <- "completed"
+          if (i <= length(stages)) {
+            stages[[i]]$status <- "completed"
+          }
         }
-        # Mark current stage as active
-        stages[[current_index + 1]]$status <- "active"
+        # Mark current stage as active (if not past the end)
+        next_stage <- current_index + 1
+        if (next_stage <= length(stages)) {
+          stages[[next_stage]]$status <- "active"
+        }
       }
 
       # Create timeline HTML

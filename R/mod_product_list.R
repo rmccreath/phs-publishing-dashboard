@@ -187,24 +187,28 @@ mod_product_list_server <- function(id, product_repo, user) {
         message("Loaded ", nrow(data), " products")
 
         # Apply filters
-        if (!is.null(input$filter_stage) && input$filter_stage != "") {
-          data <- data %>% dplyr::filter(lifecycle_stage == input$filter_stage)
+        filter_stage_value <- input$filter_stage
+        if (!is.null(filter_stage_value) && filter_stage_value != "") {
+          data <- data %>% dplyr::filter(.data$lifecycle_stage == filter_stage_value)
         }
 
-        if (!is.null(input$filter_type) && input$filter_type != "") {
-          data <- data %>% dplyr::filter(type == input$filter_type)
+        filter_type_value <- input$filter_type
+        if (!is.null(filter_type_value) && filter_type_value != "") {
+          data <- data %>% dplyr::filter(.data$type == filter_type_value)
         }
 
-        if (!is.null(input$filter_department) && input$filter_department != "") {
-          data <- data %>% dplyr::filter(department == input$filter_department)
+        filter_dept_value <- input$filter_department
+        if (!is.null(filter_dept_value) && filter_dept_value != "") {
+          data <- data %>% dplyr::filter(.data$department == filter_dept_value)
         }
 
-        if (!is.null(input$filter_search) && nchar(input$filter_search) > 0) {
-          search_term <- tolower(input$filter_search)
+        filter_search_value <- input$filter_search
+        if (!is.null(filter_search_value) && nchar(filter_search_value) > 0) {
+          search_term <- tolower(filter_search_value)
           data <- data %>%
             dplyr::filter(
-              grepl(search_term, tolower(name)) |
-              grepl(search_term, tolower(description %||% ""))
+              grepl(search_term, tolower(.data$name)) |
+              grepl(search_term, tolower(.data$description %||% ""))
             )
         }
 
@@ -330,7 +334,7 @@ mod_product_list_server <- function(id, product_repo, user) {
 
     # Navigate to approval submission
     observeEvent(input$btn_new_approval, {
-      shiny.router::change_page("/approvals")
+      shiny.router::change_page("/approvals?tab=submit")
     })
 
     # Refresh data

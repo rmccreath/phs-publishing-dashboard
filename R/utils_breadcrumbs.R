@@ -62,10 +62,9 @@ product_breadcrumbs <- function(product_name = NULL) {
       "Products" = "products"
     )
   } else {
-    breadcrumbs(
-      "Products" = "products",
-      !!product_name := ""
-    )
+    items <- list("Products" = "products")
+    items[[product_name]] <- ""
+    do.call(breadcrumbs, items)
   }
 }
 
@@ -92,11 +91,9 @@ audit_breadcrumbs <- function(product_name = NULL) {
       "Audits" = "audits"
     )
   } else {
-    breadcrumbs(
-      "Products" = "products",
-      "Audits" = "audits",
-      !!product_name := ""
-    )
+    items <- list("Products" = "products", "Audits" = "audits")
+    items[[product_name]] <- ""
+    do.call(breadcrumbs, items)
   }
 }
 
@@ -112,11 +109,9 @@ review_breadcrumbs <- function(product_name = NULL) {
       "Reviews" = "reviews"
     )
   } else {
-    breadcrumbs(
-      "Products" = "products",
-      "Reviews" = "reviews",
-      !!product_name := ""
-    )
+    items <- list("Products" = "products", "Reviews" = "reviews")
+    items[[product_name]] <- ""
+    do.call(breadcrumbs, items)
   }
 }
 

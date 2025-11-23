@@ -346,6 +346,17 @@ mod_approval_workflow_server <- function(id, approval_repo, dashboard_repo, user
       refresh_trigger = 0
     )
 
+    # Check for tab query parameter and switch to it
+    observe({
+      query <- shiny.router::get_query_param()
+      if (!is.null(query) && "tab" %in% names(query)) {
+        tab_name <- query[["tab"]]
+        if (tab_name == "submit") {
+          shiny::updateTabsetPanel(session, "workflow_tabs", selected = "Submit for Approval")
+        }
+      }
+    })
+
     # Load pending approvals
     pending_approvals <- reactive({
       rv$refresh_trigger  # Trigger refresh
