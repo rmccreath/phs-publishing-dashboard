@@ -627,7 +627,7 @@ mod_product_detail_server <- function(id, product_repo, approval_repo, audit_rep
     observeEvent(input$btn_edit, {
       shiny::showNotification(
         "Edit functionality will be implemented in future phases.",
-        type = "info",
+        type = "message",
         duration = 3
       )
     })

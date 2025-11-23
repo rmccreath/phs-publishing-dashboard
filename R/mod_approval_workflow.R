@@ -530,19 +530,49 @@ mod_approval_workflow_server <- function(id, approval_repo, dashboard_repo, user
 
     # Submit new approval
     observeEvent(input$btn_submit, {
-      req(
-        input$submit_product_name,
-        input$submit_product_type,
-        input$submit_department,
-        input$submit_team,
-        input$submit_description,
-        input$submit_justification,
-        input$submit_audience,
-        input$submit_data_sources,
-        input$submit_update_schedule,
-        input$submit_support_plan,
-        input$submit_confirm
-      )
+      # Validate required fields
+      errors <- c()
+
+      if (is.null(input$submit_product_name) || nchar(trimws(input$submit_product_name)) == 0) {
+        errors <- c(errors, "Product Name is required")
+      }
+      if (is.null(input$submit_department) || nchar(trimws(input$submit_department)) == 0) {
+        errors <- c(errors, "Department is required")
+      }
+      if (is.null(input$submit_team) || nchar(trimws(input$submit_team)) == 0) {
+        errors <- c(errors, "Team is required")
+      }
+      if (is.null(input$submit_description) || nchar(trimws(input$submit_description)) == 0) {
+        errors <- c(errors, "Description is required")
+      }
+      if (is.null(input$submit_justification) || nchar(trimws(input$submit_justification)) == 0) {
+        errors <- c(errors, "Business Justification is required")
+      }
+      if (is.null(input$submit_audience) || nchar(trimws(input$submit_audience)) == 0) {
+        errors <- c(errors, "Target Audience is required")
+      }
+      if (is.null(input$submit_data_sources) || nchar(trimws(input$submit_data_sources)) == 0) {
+        errors <- c(errors, "Data Sources is required")
+      }
+      if (is.null(input$submit_support_plan) || nchar(trimws(input$submit_support_plan)) == 0) {
+        errors <- c(errors, "Support Plan is required")
+      }
+      if (!input$submit_confirm) {
+        errors <- c(errors, "You must confirm that the product meets PHS standards")
+      }
+
+      # Show validation errors
+      if (length(errors) > 0) {
+        shiny::showNotification(
+          HTML(paste0(
+            "<strong>Please fix the following errors:</strong><br/>",
+            paste("•", errors, collapse = "<br/>")
+          )),
+          type = "error",
+          duration = 8
+        )
+        return()
+      }
 
       tryCatch({
         # Create new product record (approved but not yet in development)
@@ -579,9 +609,12 @@ mod_approval_workflow_server <- function(id, approval_repo, dashboard_repo, user
         approval_repo$create(approval_data)
 
         shiny::showNotification(
-          "Product approval submitted successfully",
+          HTML(paste0(
+            "<strong>Success!</strong><br/>",
+            "Product '", input$submit_product_name, "' has been created and is awaiting development."
+          )),
           type = "message",
-          duration = 3
+          duration = 5
         )
 
         # Reset form
@@ -595,14 +628,17 @@ mod_approval_workflow_server <- function(id, approval_repo, dashboard_repo, user
         updateTextAreaInput(session, "submit_support_plan", value = "")
         updateCheckboxInput(session, "submit_confirm", value = FALSE)
 
-        # Trigger refresh and navigate to product list
+        # Navigate to the newly created product detail page
         rv$refresh_trigger <- rv$refresh_trigger + 1
-        shiny.router::change_page("/products")
+        shiny.router::change_page(paste0("/product?id=", product_id))
       }, error = function(e) {
         shiny::showNotification(
-          paste("Error submitting approval:", e$message),
+          HTML(paste0(
+            "<strong>Error submitting approval:</strong><br/>",
+            e$message
+          )),
           type = "error",
-          duration = 5
+          duration = 8
         )
       })
     })
