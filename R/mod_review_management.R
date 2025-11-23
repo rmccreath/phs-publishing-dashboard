@@ -12,6 +12,9 @@ mod_review_management_ui <- function(id) {
   ns <- NS(id)
 
   bslib::page_fillable(
+    # Breadcrumbs
+    review_breadcrumbs(),
+
     bslib::card(
       bslib::card_header(
         shiny::h4("Review Management", class = "mb-0")
@@ -28,14 +31,6 @@ mod_review_management_ui <- function(id) {
             shiny::tags$li("Review history tracking"),
             shiny::tags$li("Manual review triggers")
           )
-        ),
-
-        shiny::actionButton(
-          ns("btn_back"),
-          "Back to Products",
-          icon = shiny::icon("arrow-left"),
-          class = "btn-outline-primary",
-          onclick = "window.history.back()"
         )
       )
     )

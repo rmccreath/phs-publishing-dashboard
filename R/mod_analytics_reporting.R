@@ -12,6 +12,9 @@ mod_analytics_reporting_ui <- function(id) {
   ns <- NS(id)
 
   bslib::page_fillable(
+    # Breadcrumbs
+    analytics_breadcrumbs(),
+
     bslib::navset_card_tab(
       id = ns("analytics_tabs"),
       full_screen = TRUE,

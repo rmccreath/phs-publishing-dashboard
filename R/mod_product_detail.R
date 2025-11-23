@@ -12,15 +12,8 @@ mod_product_detail_ui <- function(id) {
   ns <- NS(id)
 
   bslib::page_fillable(
-    # Back button
-    shiny::div(
-      class = "mb-3",
-      shiny::actionLink(
-        ns("btn_back"),
-        HTML("<i class='bi bi-arrow-left'></i> Back to Products"),
-        class = "btn btn-link"
-      )
-    ),
+    # Breadcrumbs
+    shiny::uiOutput(ns("breadcrumbs")),
 
     # Product header
     bslib::card(
@@ -185,6 +178,12 @@ mod_product_detail_server <- function(id, product_repo, approval_repo, audit_rep
     approval <- reactive({
       req(product_id())
       approval_repo$get_by_product_id(product_id())
+    })
+
+    # Breadcrumbs
+    output$breadcrumbs <- renderUI({
+      req(product())
+      product_breadcrumbs(product()$name)
     })
 
     # Product header outputs

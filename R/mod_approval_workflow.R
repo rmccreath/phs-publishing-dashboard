@@ -12,6 +12,9 @@ mod_approval_workflow_ui <- function(id) {
   ns <- NS(id)
 
   bslib::page_fillable(
+    # Breadcrumbs
+    approval_breadcrumbs(),
+
     bslib::navset_card_tab(
       id = ns("workflow_tabs"),
       full_screen = TRUE,
@@ -68,12 +71,43 @@ mod_approval_workflow_ui <- function(id) {
               shiny::div(
                 class = "col-md-6",
 
-                shiny::h5("Dashboard Information"),
+                shiny::h5("Product Information"),
+
+                shiny::textInput(
+                  ns("submit_product_name"),
+                  "Product Name *",
+                  placeholder = "Enter the name of the new product..."
+                ),
 
                 shiny::selectInput(
-                  ns("submit_dashboard"),
-                  "Select Dashboard *",
-                  choices = NULL
+                  ns("submit_product_type"),
+                  "Product Type *",
+                  choices = c(
+                    "Shiny Dashboard" = "shiny_dashboard",
+                    "Quarto Report" = "quarto_report",
+                    "Dash Application" = "dash_app",
+                    "API Service" = "api_service",
+                    "Other" = "other"
+                  )
+                ),
+
+                shiny::textInput(
+                  ns("submit_department"),
+                  "Department *",
+                  placeholder = "e.g., Digital & Technology"
+                ),
+
+                shiny::textInput(
+                  ns("submit_team"),
+                  "Team *",
+                  placeholder = "e.g., Analytics"
+                ),
+
+                shiny::textAreaInput(
+                  ns("submit_description"),
+                  "Description *",
+                  placeholder = "Brief description of the product...",
+                  rows = 3
                 ),
 
                 shiny::textAreaInput(
@@ -312,16 +346,6 @@ mod_approval_workflow_server <- function(id, approval_repo, dashboard_repo, user
       refresh_trigger = 0
     )
 
-    # Load dashboards for submission dropdown
-    observe({
-      req(has_permission(user(), "submit"))
-
-      dashboards <- dashboard_repo$get_all(list(status = "draft"))
-      dashboard_choices <- setNames(dashboards$dashboard_id, dashboards$name)
-
-      updateSelectInput(session, "submit_dashboard", choices = dashboard_choices)
-    })
-
     # Load pending approvals
     pending_approvals <- reactive({
       rv$refresh_trigger  # Trigger refresh
@@ -363,9 +387,24 @@ mod_approval_workflow_server <- function(id, approval_repo, dashboard_repo, user
     output$pending_table <- DT::renderDT({
       req(pending_approvals())
 
-      data <- pending_approvals() %>%
+      # Store product IDs for click handling
+      approvals_data <- pending_approvals()
+
+      data <- approvals_data %>%
+        dplyr::mutate(
+          # Create clickable links for product names
+          Product = paste0(
+            '<a href="#" onclick="Shiny.setInputValue(\'',
+            ns("product_link_clicked"),
+            '\', \'',
+            dashboard_id,
+            '\', {priority: \'event\'}); return false;">',
+            dashboard_name,
+            '</a>'
+          )
+        ) %>%
         dplyr::select(
-          Dashboard = dashboard_name,
+          Product,
           `Submitted By` = submitted_by_name,
           `Submitted At` = submitted_at,
           Status = status,
@@ -382,8 +421,16 @@ mod_approval_workflow_server <- function(id, approval_repo, dashboard_repo, user
         ),
         selection = 'single',
         class = "display compact stripe hover",
-        rownames = FALSE
+        rownames = FALSE,
+        escape = FALSE  # Allow HTML in Product column
       )
+    })
+
+    # Handle product link clicks
+    observeEvent(input$product_link_clicked, {
+      req(input$product_link_clicked)
+      product_id <- input$product_link_clicked
+      shiny.router::change_page(paste0("/product?id=", product_id))
     })
 
     # Handle row selection
@@ -473,7 +520,11 @@ mod_approval_workflow_server <- function(id, approval_repo, dashboard_repo, user
     # Submit new approval
     observeEvent(input$btn_submit, {
       req(
-        input$submit_dashboard,
+        input$submit_product_name,
+        input$submit_product_type,
+        input$submit_department,
+        input$submit_team,
+        input$submit_description,
         input$submit_justification,
         input$submit_audience,
         input$submit_data_sources,
@@ -483,40 +534,59 @@ mod_approval_workflow_server <- function(id, approval_repo, dashboard_repo, user
       )
 
       tryCatch({
+        # Create new product record (approved but not yet in development)
+        product_data <- list(
+          name = input$submit_product_name,
+          type = input$submit_product_type,
+          department = input$submit_department,
+          team = input$submit_team,
+          description = input$submit_description,
+          lifecycle_stage = "approved",
+          current_status = "awaiting_development",
+          created_by = user()$username,
+          owner_id = user()$user_id,
+          owner_name = user()$full_name,
+          owner_email = user()$email
+        )
+
+        product_id <- dashboard_repo$create(product_data)
+
+        # Create approval record linked to the new product
         approval_data <- list(
-          dashboard_id = input$submit_dashboard,
+          dashboard_id = product_id,
+          dashboard_name = input$submit_product_name,
           submitted_by = user()$user_id,
+          submitted_by_name = user()$full_name,
           business_justification = input$submit_justification,
           target_audience = input$submit_audience,
           data_sources = input$submit_data_sources,
           update_schedule = input$submit_update_schedule,
           support_plan = input$submit_support_plan,
-          status = "pending"
+          status = "approved"
         )
 
         approval_repo$create(approval_data)
 
-        # Update dashboard status
-        dashboard_repo$update(
-          input$submit_dashboard,
-          list(status = "pending_approval")
-        )
-
         shiny::showNotification(
-          "Dashboard submitted for approval successfully",
+          "Product approval submitted successfully",
           type = "message",
           duration = 3
         )
 
         # Reset form
+        updateTextInput(session, "submit_product_name", value = "")
+        updateTextInput(session, "submit_department", value = "")
+        updateTextInput(session, "submit_team", value = "")
+        updateTextAreaInput(session, "submit_description", value = "")
         updateTextAreaInput(session, "submit_justification", value = "")
         updateTextAreaInput(session, "submit_audience", value = "")
         updateTextAreaInput(session, "submit_data_sources", value = "")
         updateTextAreaInput(session, "submit_support_plan", value = "")
         updateCheckboxInput(session, "submit_confirm", value = FALSE)
 
-        # Trigger refresh
+        # Trigger refresh and navigate to product list
         rv$refresh_trigger <- rv$refresh_trigger + 1
+        shiny.router::change_page("/products")
       }, error = function(e) {
         shiny::showNotification(
           paste("Error submitting approval:", e$message),

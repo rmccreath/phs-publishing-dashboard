@@ -12,6 +12,9 @@ mod_audit_management_ui <- function(id) {
   ns <- NS(id)
 
   bslib::page_fillable(
+    # Breadcrumbs
+    audit_breadcrumbs(),
+
     bslib::card(
       bslib::card_header(
         shiny::h4("Audit Management", class = "mb-0")
@@ -28,14 +31,6 @@ mod_audit_management_ui <- function(id) {
             shiny::tags$li("Audit scoring and approval"),
             shiny::tags$li("Automation flags for future integration")
           )
-        ),
-
-        shiny::actionButton(
-          ns("btn_back"),
-          "Back to Products",
-          icon = shiny::icon("arrow-left"),
-          class = "btn-outline-primary",
-          onclick = "window.history.back()"
         )
       )
     )
