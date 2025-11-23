@@ -12,7 +12,7 @@ generate_sample_dashboards <- function() {
 
   # Generate lifecycle stages with realistic distribution
   lifecycle_stages <- sample(
-    c("approved", "in_development", "in_audit", "deployed", "archived"),
+    c("awaiting_approval", "in_development", "in_audit", "deployed", "archived"),
     n,
     replace = TRUE,
     prob = c(0.1, 0.1, 0.15, 0.6, 0.05)
@@ -21,7 +21,7 @@ generate_sample_dashboards <- function() {
   # Generate status based on lifecycle stage
   current_status <- sapply(lifecycle_stages, function(stage) {
     switch(stage,
-      approved = "awaiting_development",
+      awaiting_approval = "awaiting_approval",
       in_development = "in_progress",
       in_audit = sample(c("audit_in_progress", "audit_review"), 1),
       deployed = sample(c("active", "review_due", "flagged"), 1, prob = c(0.7, 0.2, 0.1)),
@@ -385,13 +385,51 @@ MockDashboardRepository <- R6::R6Class(
     },
 
     update = function(dashboard_id, updates) {
-      # In demo mode, just log the update
-      message("Demo mode: Update logged for dashboard ", dashboard_id)
+      # Find the product
+      id_value <- dashboard_id
+      row_idx <- which(private$data$dashboard_id == id_value | private$data$product_id == id_value)
+
+      if (length(row_idx) == 0) {
+        warning("Product not found: ", dashboard_id)
+        return(0)
+      }
+
+      # Update fields
+      for (field in names(updates)) {
+        if (field %in% names(private$data)) {
+          private$data[[field]][row_idx[1]] <- updates[[field]]
+        }
+      }
+
+      # Update timestamp
+      private$data$updated_at[row_idx[1]] <- Sys.time()
+
+      message("Demo mode: Updated product ", dashboard_id)
       1
     },
 
+    update_lifecycle_stage = function(product_id, new_stage, new_status) {
+      # Find the product
+      prod_id_value <- product_id
+      row_idx <- which(private$data$dashboard_id == prod_id_value | private$data$product_id == prod_id_value)
+
+      if (length(row_idx) == 0) {
+        warning("Product not found: ", product_id)
+        return(FALSE)
+      }
+
+      # Update lifecycle stage and status
+      private$data$lifecycle_stage[row_idx[1]] <- new_stage
+      private$data$current_status[row_idx[1]] <- new_status
+      private$data$updated_at[row_idx[1]] <- Sys.time()
+
+      message("Demo mode: Product ", product_id, " moved to ", new_stage)
+      TRUE
+    },
+
     delete = function(dashboard_id) {
-      private$data <- dplyr::filter(private$data, dashboard_id != !!dashboard_id)
+      id_value <- dashboard_id
+      private$data <- dplyr::filter(private$data, .data$dashboard_id != id_value)
       1
     },
 
@@ -475,6 +513,45 @@ MockApprovalRepository <- R6::R6Class(
     add_signoff = function(approval_id, signoff_type, user_id) {
       message("Demo mode: Sign-off added for ", signoff_type)
       1
+    },
+
+    update_signoff_by_product = function(product_id, signoff_type, user_name) {
+      # Find the approval for this product
+      prod_id_value <- product_id
+      row_idx <- which(private$data$dashboard_id == prod_id_value)
+
+      if (length(row_idx) == 0) {
+        warning("No approval found for product: ", product_id)
+        return(FALSE)
+      }
+
+      # Update the appropriate sign-off field
+      if (signoff_type == "governance") {
+        private$data$governance_signoff[row_idx[1]] <- TRUE
+        private$data$governance_signoff_by[row_idx[1]] <- user_name
+        private$data$governance_signoff_at[row_idx[1]] <- Sys.time()
+      } else if (signoff_type == "technical") {
+        private$data$technical_signoff[row_idx[1]] <- TRUE
+        private$data$technical_signoff_by[row_idx[1]] <- user_name
+        private$data$technical_signoff_at[row_idx[1]] <- Sys.time()
+      } else if (signoff_type == "security") {
+        private$data$security_signoff[row_idx[1]] <- TRUE
+        private$data$security_signoff_by[row_idx[1]] <- user_name
+        private$data$security_signoff_at[row_idx[1]] <- Sys.time()
+      }
+
+      # Check if all three sign-offs are complete
+      all_complete <- private$data$governance_signoff[row_idx[1]] &&
+                      private$data$technical_signoff[row_idx[1]] &&
+                      private$data$security_signoff[row_idx[1]]
+
+      if (all_complete) {
+        private$data$status[row_idx[1]] <- "approved"
+        private$data$updated_at[row_idx[1]] <- Sys.time()
+        message("All sign-offs complete for product: ", product_id)
+      }
+
+      return(all_complete)
     }
   )
 )

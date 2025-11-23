@@ -148,6 +148,11 @@ mod_product_detail_server <- function(id, product_repo, approval_repo, audit_rep
   moduleServer(id, function(input, output, session) {
     ns <- session$ns
 
+    # Reactive values for refresh triggers
+    rv <- reactiveValues(
+      refresh_trigger = 0
+    )
+
     # Get product ID from URL
     product_id <- reactive({
       query <- shiny.router::get_query_param()
@@ -159,6 +164,7 @@ mod_product_detail_server <- function(id, product_repo, approval_repo, audit_rep
 
     # Load product data
     product <- reactive({
+      rv$refresh_trigger  # Trigger refresh
       req(product_id())
       result <- product_repo$get_by_id(product_id())
 
@@ -172,6 +178,7 @@ mod_product_detail_server <- function(id, product_repo, approval_repo, audit_rep
 
     # Load approval data
     approval <- reactive({
+      rv$refresh_trigger  # Trigger refresh
       req(product_id())
       if (is.null(approval_repo)) {
         return(NULL)
@@ -283,7 +290,7 @@ mod_product_detail_server <- function(id, product_repo, approval_repo, audit_rep
       stage <- prod$lifecycle_stage[1]
 
       color <- switch(stage,
-        approved = "warning",
+        awaiting_approval = "warning",
         in_development = "info",
         in_audit = "primary",
         deployed = "success",
@@ -292,12 +299,12 @@ mod_product_detail_server <- function(id, product_repo, approval_repo, audit_rep
       )
 
       label <- switch(stage,
-        approved = "Approved",
+        awaiting_approval = "Awaiting Approval",
         in_development = "In Development",
         in_audit = "In Audit",
         deployed = "Deployed",
         archived = "Archived",
-        tools::toTitleCase(stage)
+        tools::toTitleCase(gsub("_", " ", stage))
       )
 
       shiny::span(
@@ -332,14 +339,14 @@ mod_product_detail_server <- function(id, product_repo, approval_repo, audit_rep
       current_stage <- p$lifecycle_stage[1]
 
       # IMPORTANT: Development cannot start until approval is complete
-      if (current_stage == "approved") {
-        # Approval stage
+      if (current_stage == "awaiting_approval") {
+        # Awaiting approval stage - approval process in progress
         if (approval_complete) {
           stages[[1]]$status <- "completed"  # Approval done
           stages[[2]]$status <- "active"     # Development can start
         } else {
-          stages[[1]]$status <- "on_hold"    # Waiting for approval completion
-          stages[[2]]$status <- "blocked"    # Development blocked
+          stages[[1]]$status <- "active"     # Approval in progress
+          stages[[2]]$status <- "blocked"    # Development blocked until approval
         }
       } else if (current_stage == "in_development") {
         stages[[1]]$status <- "completed"
@@ -634,29 +641,113 @@ mod_product_detail_server <- function(id, product_repo, approval_repo, audit_rep
 
     # Governance approval button
     observeEvent(input$btn_approve_governance, {
-      shiny::showNotification(
-        "Governance approval recorded. (Demo mode - changes not persisted)",
-        type = "message",
-        duration = 3
+      req(product_id())
+      req(has_permission(user(), "approve"))
+
+      # Update the sign-off in the approval repository
+      all_complete <- approval_repo$update_signoff_by_product(
+        product_id(),
+        "governance",
+        user()$full_name
       )
+
+      if (all_complete) {
+        # All sign-offs complete - move product to in_development
+        product_repo$update_lifecycle_stage(
+          product_id(),
+          "in_development",
+          "in_progress"
+        )
+
+        shiny::showNotification(
+          HTML("<strong>All approvals complete!</strong><br/>Product has been moved to 'In Development' stage."),
+          type = "message",
+          duration = 5
+        )
+      } else {
+        shiny::showNotification(
+          "Governance approval recorded successfully.",
+          type = "message",
+          duration = 3
+        )
+      }
+
+      # Refresh the page data
+      rv$refresh_trigger <- rv$refresh_trigger + 1
     })
 
     # Technical approval button
     observeEvent(input$btn_approve_technical, {
-      shiny::showNotification(
-        "Technical approval recorded. (Demo mode - changes not persisted)",
-        type = "message",
-        duration = 3
+      req(product_id())
+      req(has_permission(user(), "approve"))
+
+      # Update the sign-off in the approval repository
+      all_complete <- approval_repo$update_signoff_by_product(
+        product_id(),
+        "technical",
+        user()$full_name
       )
+
+      if (all_complete) {
+        # All sign-offs complete - move product to in_development
+        product_repo$update_lifecycle_stage(
+          product_id(),
+          "in_development",
+          "in_progress"
+        )
+
+        shiny::showNotification(
+          HTML("<strong>All approvals complete!</strong><br/>Product has been moved to 'In Development' stage."),
+          type = "message",
+          duration = 5
+        )
+      } else {
+        shiny::showNotification(
+          "Technical approval recorded successfully.",
+          type = "message",
+          duration = 3
+        )
+      }
+
+      # Refresh the page data
+      rv$refresh_trigger <- rv$refresh_trigger + 1
     })
 
     # Security approval button
     observeEvent(input$btn_approve_security, {
-      shiny::showNotification(
-        "Security approval recorded. (Demo mode - changes not persisted)",
-        type = "message",
-        duration = 3
+      req(product_id())
+      req(has_permission(user(), "approve"))
+
+      # Update the sign-off in the approval repository
+      all_complete <- approval_repo$update_signoff_by_product(
+        product_id(),
+        "security",
+        user()$full_name
       )
+
+      if (all_complete) {
+        # All sign-offs complete - move product to in_development
+        product_repo$update_lifecycle_stage(
+          product_id(),
+          "in_development",
+          "in_progress"
+        )
+
+        shiny::showNotification(
+          HTML("<strong>All approvals complete!</strong><br/>Product has been moved to 'In Development' stage."),
+          type = "message",
+          duration = 5
+        )
+      } else {
+        shiny::showNotification(
+          "Security approval recorded successfully.",
+          type = "message",
+          duration = 3
+        )
+      }
+
+      # Refresh the page data
+      rv$refresh_trigger <- rv$refresh_trigger + 1
     })
   })
 }

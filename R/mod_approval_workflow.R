@@ -575,15 +575,15 @@ mod_approval_workflow_server <- function(id, approval_repo, dashboard_repo, user
       }
 
       tryCatch({
-        # Create new product record (approved but not yet in development)
+        # Create new product record (awaiting approval - not yet in development)
         product_data <- list(
           name = input$submit_product_name,
           type = input$submit_product_type,
           department = input$submit_department,
           team = input$submit_team,
           description = input$submit_description,
-          lifecycle_stage = "approved",
-          current_status = "awaiting_development",
+          lifecycle_stage = "awaiting_approval",
+          current_status = "awaiting_approval",
           created_by = user()$username,
           owner_id = user()$user_id,
           owner_name = user()$full_name,
@@ -592,7 +592,7 @@ mod_approval_workflow_server <- function(id, approval_repo, dashboard_repo, user
 
         product_id <- dashboard_repo$create(product_data)
 
-        # Create approval record linked to the new product
+        # Create approval record linked to the new product (pending approval)
         approval_data <- list(
           dashboard_id = product_id,
           dashboard_name = input$submit_product_name,
@@ -603,7 +603,7 @@ mod_approval_workflow_server <- function(id, approval_repo, dashboard_repo, user
           data_sources = input$submit_data_sources,
           update_schedule = input$submit_update_schedule,
           support_plan = input$submit_support_plan,
-          status = "approved"
+          status = "pending"  # Pending until all sign-offs complete
         )
 
         approval_repo$create(approval_data)

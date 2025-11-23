@@ -240,7 +240,7 @@ mod_product_list_server <- function(id, product_repo, user) {
 
     # Summary counts
     output$count_approval <- renderText({
-      sum(products()$lifecycle_stage == "approved", na.rm = TRUE)
+      sum(products()$lifecycle_stage == "awaiting_approval", na.rm = TRUE)
     })
 
     output$count_audit <- renderText({
@@ -284,12 +284,12 @@ mod_product_list_server <- function(id, product_repo, user) {
             TRUE ~ tools::toTitleCase(type)
           ),
           Stage_Display = dplyr::case_when(
-            lifecycle_stage == "approved" ~ "Approved",
+            lifecycle_stage == "awaiting_approval" ~ "Awaiting Approval",
             lifecycle_stage == "in_development" ~ "In Development",
             lifecycle_stage == "in_audit" ~ "In Audit",
             lifecycle_stage == "deployed" ~ "Deployed",
             lifecycle_stage == "archived" ~ "Archived",
-            TRUE ~ tools::toTitleCase(lifecycle_stage)
+            TRUE ~ tools::toTitleCase(gsub("_", " ", lifecycle_stage))
           ),
           Status_Display = tools::toTitleCase(gsub("_", " ", current_status %||% ""))
         ) %>%
