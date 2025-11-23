@@ -185,38 +185,40 @@ generate_sample_dashboards <- function() {
 #' @return Data frame of sample approvals
 #' @export
 generate_sample_approvals <- function() {
-  # Match product IDs (prod-1 to prod-25)
+  # Generate approvals for 20 products (80% coverage) using sequential IDs
+  n <- 20
+
   tibble::tibble(
-    approval_id = paste0("approval-", 1:10),
-    dashboard_id = paste0("prod-", sample(1:25, 10, replace = TRUE)),  # Match prod- IDs
-    dashboard_name = paste("Product", sample(1:25, 10, replace = TRUE)),
-    submitted_by = paste0("user-", sample(1:5, 10, replace = TRUE)),
-    submitted_by_name = sample(c("Alice Smith", "Bob Jones", "Carol White"), 10, replace = TRUE),
-    submitted_at = as.POSIXct(Sys.Date() - sample(1:30, 10, replace = TRUE)),
+    approval_id = paste0("approval-", 1:n),
+    dashboard_id = paste0("prod-", 1:n),  # Sequential IDs for first 20 products
+    dashboard_name = paste("Product", 1:n),
+    submitted_by = paste0("user-", sample(1:5, n, replace = TRUE)),
+    submitted_by_name = sample(c("Alice Smith", "Bob Jones", "Carol White"), n, replace = TRUE),
+    submitted_at = as.POSIXct(Sys.Date() - sample(1:30, n, replace = TRUE)),
     business_justification = paste(
       "This dashboard is needed to provide stakeholders with timely insights into",
-      sample(c("service performance", "patient outcomes", "operational efficiency"), 10, replace = TRUE)
+      sample(c("service performance", "patient outcomes", "operational efficiency"), n, replace = TRUE)
     ),
-    target_audience = sample(c("Senior Management", "Clinical Teams", "Public", "Commissioners"), 10, replace = TRUE),
+    target_audience = sample(c("Senior Management", "Clinical Teams", "Public", "Commissioners"), n, replace = TRUE),
     data_sources = "NHS Scotland data warehouse, Public Health Scotland datasets",
-    update_schedule = sample(c("daily", "weekly", "monthly"), 10, replace = TRUE),
+    update_schedule = sample(c("daily", "weekly", "monthly"), n, replace = TRUE),
     support_plan = "Maintained by the Analytics team with on-call support",
-    status = sample(c("pending", "under_review", "approved", "rejected", "requires_changes"), 10, replace = TRUE, prob = c(0.3, 0.2, 0.3, 0.1, 0.1)),
-    reviewed_by = ifelse(runif(10) > 0.5, paste0("user-", sample(1:2, 10, replace = TRUE)), NA_character_),
-    reviewed_at = as.POSIXct(ifelse(runif(10) > 0.5, Sys.Date() - sample(1:15, 10, replace = TRUE), NA)),
-    review_notes = ifelse(runif(10) > 0.7, "Please update documentation", NA_character_),
-    governance_signoff = runif(10) > 0.6,
+    status = sample(c("pending", "under_review", "approved", "rejected", "requires_changes"), n, replace = TRUE, prob = c(0.3, 0.2, 0.3, 0.1, 0.1)),
+    reviewed_by = ifelse(runif(n) > 0.5, paste0("user-", sample(1:2, n, replace = TRUE)), NA_character_),
+    reviewed_at = as.POSIXct(ifelse(runif(n) > 0.5, Sys.Date() - sample(1:15, n, replace = TRUE), NA)),
+    review_notes = ifelse(runif(n) > 0.7, "Please update documentation", NA_character_),
+    governance_signoff = runif(n) > 0.6,
     governance_signoff_by = NA_character_,
     governance_signoff_at = as.POSIXct(NA),
-    technical_signoff = runif(10) > 0.7,
+    technical_signoff = runif(n) > 0.7,
     technical_signoff_by = NA_character_,
     technical_signoff_at = as.POSIXct(NA),
-    security_signoff = runif(10) > 0.8,
+    security_signoff = runif(n) > 0.8,
     security_signoff_by = NA_character_,
     security_signoff_at = as.POSIXct(NA),
-    metadata = I(lapply(1:10, function(x) list())),
-    created_at = as.POSIXct(Sys.Date() - sample(30:60, 10, replace = TRUE)),
-    updated_at = as.POSIXct(Sys.Date() - sample(1:30, 10, replace = TRUE))
+    metadata = I(lapply(1:n, function(x) list())),
+    created_at = as.POSIXct(Sys.Date() - sample(30:60, n, replace = TRUE)),
+    updated_at = as.POSIXct(Sys.Date() - sample(1:30, n, replace = TRUE))
   )
 }
 
@@ -445,7 +447,15 @@ MockApprovalRepository <- R6::R6Class(
     },
 
     get_by_product_id = function(product_id) {
-      data <- dplyr::filter(private$data, dashboard_id == !!product_id)
+      # Use proper NSE to avoid scoping issues
+      prod_id_value <- product_id
+
+      # Check if dashboard_id column exists
+      if (!"dashboard_id" %in% names(private$data)) {
+        return(NULL)
+      }
+
+      data <- dplyr::filter(private$data, .data$dashboard_id == prod_id_value)
       if (nrow(data) > 0) {
         return(data[1, ])  # Return first match
       }
