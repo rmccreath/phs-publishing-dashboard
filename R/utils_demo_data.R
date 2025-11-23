@@ -145,12 +145,12 @@ generate_sample_dashboards <- function() {
 
     # Metadata
     tags = I(lapply(1:n, function(x) {
-      as.vector(sample(c("covid", "hospital", "vaccine", "gp", "mental-health", "quality", "performance"),
-        sample(2:4, 1)))
+      unname(as.vector(sample(c("covid", "hospital", "vaccine", "gp", "mental-health", "quality", "performance"),
+        sample(2:4, 1))))
     })),
     keywords = I(lapply(1:n, function(x) {
-      as.vector(sample(c("analytics", "monitoring", "reporting", "dashboard", "tracker"),
-        sample(2:3, 1)))
+      unname(as.vector(sample(c("analytics", "monitoring", "reporting", "dashboard", "tracker"),
+        sample(2:3, 1))))
     })),
     metadata = I(lapply(1:n, function(x) list())),
 
@@ -185,10 +185,11 @@ generate_sample_dashboards <- function() {
 #' @return Data frame of sample approvals
 #' @export
 generate_sample_approvals <- function() {
+  # Match product IDs (prod-1 to prod-25)
   tibble::tibble(
     approval_id = paste0("approval-", 1:10),
-    dashboard_id = paste0("demo-", sample(15:20, 10, replace = TRUE)),
-    dashboard_name = paste("Dashboard", sample(15:20, 10, replace = TRUE)),
+    dashboard_id = paste0("prod-", sample(1:25, 10, replace = TRUE)),  # Match prod- IDs
+    dashboard_name = paste("Product", sample(1:25, 10, replace = TRUE)),
     submitted_by = paste0("user-", sample(1:5, 10, replace = TRUE)),
     submitted_by_name = sample(c("Alice Smith", "Bob Jones", "Carol White"), 10, replace = TRUE),
     submitted_at = as.POSIXct(Sys.Date() - sample(1:30, 10, replace = TRUE)),
@@ -259,12 +260,24 @@ MockDashboardRepository <- R6::R6Class(
       # Try to load saved demo data first
       saved_data <- load_demo_data("dashboards.rds")
 
-      if (!is.null(saved_data)) {
+      # Validate saved data has required columns
+      required_cols <- c("product_id", "dashboard_id", "lifecycle_stage", "current_status", "type", "name")
+
+      if (!is.null(saved_data) && all(required_cols %in% names(saved_data))) {
         private$data <- saved_data
         message("Loaded ", nrow(saved_data), " dashboards from demo data file")
       } else {
+        if (!is.null(saved_data)) {
+          message("Saved data missing required columns, regenerating...")
+        }
         private$data <- generate_sample_dashboards()
         message("Generated ", nrow(private$data), " sample dashboards")
+      }
+
+      # Verify data was created correctly
+      if (!all(required_cols %in% names(private$data))) {
+        missing <- setdiff(required_cols, names(private$data))
+        stop("Demo data missing required columns: ", paste(missing, collapse = ", "))
       }
     },
 
@@ -272,25 +285,44 @@ MockDashboardRepository <- R6::R6Class(
       data <- private$data
 
       if (!is.null(filters$status)) {
-        data <- dplyr::filter(data, status == filters$status)
+        status_val <- filters$status
+        data <- dplyr::filter(data, .data$status == status_val)
       }
 
       if (!is.null(filters$team)) {
-        data <- dplyr::filter(data, team == filters$team)
+        team_val <- filters$team
+        data <- dplyr::filter(data, .data$team == team_val)
       }
 
       if (!is.null(filters$owner_id)) {
-        data <- dplyr::filter(data, owner_id == filters$owner_id)
+        owner_val <- filters$owner_id
+        data <- dplyr::filter(data, .data$owner_id == owner_val)
       }
 
       data
     },
 
     get_by_id = function(dashboard_id) {
-      # Handle both product_id and dashboard_id
-      result <- dplyr::filter(private$data, dashboard_id == !!dashboard_id | product_id == !!dashboard_id)
+      # Handle both product_id and dashboard_id using proper NSE
+      id_value <- dashboard_id
 
-      # Return first row if multiple matches, or empty tibble with structure if no matches
+      # Check which columns exist
+      has_product_id <- "product_id" %in% names(private$data)
+      has_dashboard_id <- "dashboard_id" %in% names(private$data)
+
+      if (has_product_id && has_dashboard_id) {
+        result <- dplyr::filter(private$data,
+                                .data$dashboard_id == id_value | .data$product_id == id_value)
+      } else if (has_dashboard_id) {
+        result <- dplyr::filter(private$data, .data$dashboard_id == id_value)
+      } else if (has_product_id) {
+        result <- dplyr::filter(private$data, .data$product_id == id_value)
+      } else {
+        # No ID columns found, return empty
+        result <- private$data[0, ]
+      }
+
+      # Return first row if multiple matches
       if (nrow(result) > 0) {
         result <- result[1, ]
       }

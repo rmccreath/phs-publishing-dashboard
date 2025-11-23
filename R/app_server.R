@@ -268,15 +268,21 @@ app_server <- function(input, output, session) {
       close_db_pool(pool)
     }
 
-    # Clear API caches
-    if (!is.null(connect_service)) {
-      connect_service$clear_cache()
+    # Clear API caches (safely)
+    if (!is.null(connect_service) && "clear_cache" %in% names(connect_service)) {
+      tryCatch(connect_service$clear_cache(), error = function(e) {
+        log_message("Error clearing connect cache", "WARNING")
+      })
     }
-    if (!is.null(shinyapps_service)) {
-      shinyapps_service$clear_cache()
+    if (!is.null(shinyapps_service) && "clear_cache" %in% names(shinyapps_service)) {
+      tryCatch(shinyapps_service$clear_cache(), error = function(e) {
+        log_message("Error clearing shinyapps cache", "WARNING")
+      })
     }
-    if (!is.null(github_service)) {
-      github_service$clear_cache()
+    if (!is.null(github_service) && "clear_cache" %in% names(github_service)) {
+      tryCatch(github_service$clear_cache(), error = function(e) {
+        log_message("Error clearing github cache", "WARNING")
+      })
     }
 
     log_message("Session ended", "INFO")
