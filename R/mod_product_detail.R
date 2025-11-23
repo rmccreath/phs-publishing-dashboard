@@ -280,32 +280,51 @@ mod_product_detail_server <- function(id, product_repo, approval_repo, audit_rep
     output$timeline <- renderUI({
       req(product())
 
+      # Get approval status
+      appr <- approval()
+      approval_complete <- !is.null(appr) && !is.null(appr$status) && appr$status == "approved"
+
       # Create timeline based on lifecycle stage
       stages <- list(
-        list(name = "Approval", icon = "clipboard-check", status = "completed"),
-        list(name = "Development", icon = "code", status = "completed"),
+        list(name = "Approval", icon = "clipboard-check", status = "pending"),
+        list(name = "Development", icon = "code", status = "pending"),
         list(name = "Audit", icon = "search", status = "pending"),
         list(name = "Deployment", icon = "cloud-upload", status = "pending"),
         list(name = "Reviews", icon = "clock-history", status = "pending")
       )
 
-      # Update status based on current stage
+      # Update status based on current stage and approval status
       current_stage <- product()$lifecycle_stage
-      stage_order <- c("approved", "in_development", "in_audit", "deployed")
-      current_index <- which(stage_order == current_stage)
 
-      if (length(current_index) > 0 && current_index > 0) {
-        # Mark stages as completed up to current
-        for (i in seq_len(current_index)) {
-          if (i <= length(stages)) {
-            stages[[i]]$status <- "completed"
-          }
+      # IMPORTANT: Development cannot start until approval is complete
+      if (current_stage == "approved") {
+        # Approval stage
+        if (approval_complete) {
+          stages[[1]]$status <- "completed"  # Approval done
+          stages[[2]]$status <- "active"     # Development can start
+        } else {
+          stages[[1]]$status <- "on_hold"    # Waiting for approval completion
+          stages[[2]]$status <- "blocked"    # Development blocked
         }
-        # Mark current stage as active (if not past the end)
-        next_stage <- current_index + 1
-        if (next_stage <= length(stages)) {
-          stages[[next_stage]]$status <- "active"
+      } else if (current_stage == "in_development") {
+        stages[[1]]$status <- "completed"
+        stages[[2]]$status <- "active"
+      } else if (current_stage == "in_audit") {
+        stages[[1]]$status <- "completed"
+        stages[[2]]$status <- "completed"
+        stages[[3]]$status <- "active"
+      } else if (current_stage == "deployed") {
+        stages[[1]]$status <- "completed"
+        stages[[2]]$status <- "completed"
+        stages[[3]]$status <- "completed"
+        stages[[4]]$status <- "completed"
+        stages[[5]]$status <- "active"  # Ongoing reviews
+      } else if (current_stage == "archived") {
+        # All complete but archived
+        for (i in 1:4) {
+          stages[[i]]$status <- "completed"
         }
+        stages[[5]]$status <- "completed"
       }
 
       # Create timeline HTML
@@ -313,6 +332,8 @@ mod_product_detail_server <- function(id, product_repo, approval_repo, audit_rep
         status_class <- switch(stage$status,
           completed = "text-success",
           active = "text-primary",
+          on_hold = "text-warning",
+          blocked = "text-secondary",
           "text-muted"
         )
 
@@ -320,6 +341,10 @@ mod_product_detail_server <- function(id, product_repo, approval_repo, audit_rep
           "<i class='bi bi-check-circle-fill'></i>"
         } else if (stage$status == "active") {
           "<i class='bi bi-arrow-right-circle-fill'></i>"
+        } else if (stage$status == "on_hold") {
+          "<i class='bi bi-hourglass-split'></i>"
+        } else if (stage$status == "blocked") {
+          "<i class='bi bi-slash-circle'></i>"
         } else {
           "<i class='bi bi-circle'></i>"
         }
@@ -359,6 +384,7 @@ mod_product_detail_server <- function(id, product_repo, approval_repo, audit_rep
     # Approval content
     output$approval_content <- renderUI({
       app <- approval()
+      prod <- product()
 
       if (is.null(app) || nrow(app) == 0) {
         return(shiny::div(
@@ -367,52 +393,146 @@ mod_product_detail_server <- function(id, product_repo, approval_repo, audit_rep
         ))
       }
 
-      bslib::layout_columns(
-        col_widths = c(6, 6),
+      # Check if user can approve
+      can_approve <- has_permission(user(), "approve")
+      approval_complete <- !is.null(app$status) && app$status == "approved"
 
+      shiny::tagList(
+        # Overall status banner
+        if (approval_complete) {
+          shiny::div(
+            class = "alert alert-success",
+            shiny::icon("check-circle"),
+            " This product has been fully approved and is ready for development."
+          )
+        } else {
+          shiny::div(
+            class = "alert alert-warning",
+            shiny::icon("hourglass-split"),
+            " Approval in progress. All sections must be approved before development can begin."
+          )
+        },
+
+        # Submission Information
         bslib::card(
-          bslib::card_header("Submission Details"),
+          bslib::card_header("Submission Information"),
           bslib::card_body(
-            shiny::p(shiny::strong("Submitted by:"), app$submitted_by),
-            shiny::p(shiny::strong("Submitted at:"), format(app$submitted_at, "%Y-%m-%d %H:%M")),
-            shiny::p(shiny::strong("Status:"), app$status)
+            bslib::layout_columns(
+              col_widths = c(6, 6),
+              shiny::div(
+                shiny::p(shiny::strong("Submitted by:"), app$submitted_by_name %||% "Unknown"),
+                shiny::p(shiny::strong("Submitted at:"), as.character(format(app$submitted_at, "%Y-%m-%d %H:%M")))
+              ),
+              shiny::div(
+                shiny::p(shiny::strong("Product Type:"), prod$type %||% "Unknown"),
+                shiny::p(shiny::strong("Department:"), prod$department %||% "Unknown"),
+                shiny::p(shiny::strong("Team:"), prod$team %||% "Unknown")
+              )
+            ),
+            shiny::hr(),
+            shiny::h6("Business Justification"),
+            shiny::p(app$business_justification %||% "Not provided"),
+            shiny::h6("Target Audience"),
+            shiny::p(app$target_audience %||% "Not provided"),
+            shiny::h6("Data Sources"),
+            shiny::p(app$data_sources %||% "Not provided")
           )
         ),
 
+        # Approval Sections (Guided Process)
         bslib::card(
-          bslib::card_header("Business Justification"),
+          bslib::card_header("Approval Checklist"),
           bslib::card_body(
-            shiny::p(app$business_justification %||% "Not provided")
-          )
-        ),
+            # Governance Sign-off
+            shiny::div(
+              class = "approval-section mb-4",
+              shiny::div(
+                class = "d-flex justify-content-between align-items-center mb-2",
+                shiny::h6("1. Governance Review", class = "mb-0"),
+                if (app$governance_signoff) {
+                  shiny::span(class = "badge bg-success", shiny::icon("check"), " Approved")
+                } else {
+                  shiny::span(class = "badge bg-warning", shiny::icon("clock"), " Pending")
+                }
+              ),
+              shiny::p(
+                class = "text-muted small",
+                "Reviews business case, strategic alignment, and governance compliance"
+              ),
+              if (can_approve && !app$governance_signoff) {
+                shiny::actionButton(
+                  ns("btn_approve_governance"),
+                  "Approve Governance",
+                  class = "btn-success btn-sm",
+                  icon = shiny::icon("check")
+                )
+              } else if (app$governance_signoff) {
+                shiny::div(
+                  class = "small text-success",
+                  "Approved by: ", app$governance_signoff_by %||% "System"
+                )
+              }
+            ),
 
-        bslib::card(
-          bslib::card_header("Sign-offs"),
-          bslib::card_body(
+            # Technical Sign-off
             shiny::div(
-              class = "mb-2",
-              shiny::strong("Governance:"),
-              if (app$governance_signoff) {
-                shiny::span(class = "badge bg-success ms-2", "Approved")
-              } else {
-                shiny::span(class = "badge bg-warning ms-2", "Pending")
+              class = "approval-section mb-4",
+              shiny::div(
+                class = "d-flex justify-content-between align-items-center mb-2",
+                shiny::h6("2. Technical Review", class = "mb-0"),
+                if (app$technical_signoff) {
+                  shiny::span(class = "badge bg-success", shiny::icon("check"), " Approved")
+                } else {
+                  shiny::span(class = "badge bg-warning", shiny::icon("clock"), " Pending")
+                }
+              ),
+              shiny::p(
+                class = "text-muted small",
+                "Reviews technical feasibility, architecture, and resource requirements"
+              ),
+              if (can_approve && !app$technical_signoff) {
+                shiny::actionButton(
+                  ns("btn_approve_technical"),
+                  "Approve Technical",
+                  class = "btn-success btn-sm",
+                  icon = shiny::icon("check")
+                )
+              } else if (app$technical_signoff) {
+                shiny::div(
+                  class = "small text-success",
+                  "Approved by: ", app$technical_signoff_by %||% "System"
+                )
               }
             ),
+
+            # Security Sign-off
             shiny::div(
-              class = "mb-2",
-              shiny::strong("Technical:"),
-              if (app$technical_signoff) {
-                shiny::span(class = "badge bg-success ms-2", "Approved")
-              } else {
-                shiny::span(class = "badge bg-warning ms-2", "Pending")
-              }
-            ),
-            shiny::div(
-              shiny::strong("Security:"),
-              if (app$security_signoff) {
-                shiny::span(class = "badge bg-success ms-2", "Approved")
-              } else {
-                shiny::span(class = "badge bg-warning ms-2", "Pending")
+              class = "approval-section mb-4",
+              shiny::div(
+                class = "d-flex justify-content-between align-items-center mb-2",
+                shiny::h6("3. Security Review", class = "mb-0"),
+                if (app$security_signoff) {
+                  shiny::span(class = "badge bg-success", shiny::icon("check"), " Approved")
+                } else {
+                  shiny::span(class = "badge bg-warning", shiny::icon("clock"), " Pending")
+                }
+              ),
+              shiny::p(
+                class = "text-muted small",
+                "Reviews data security, access controls, and compliance requirements"
+              ),
+              if (can_approve && !app$security_signoff) {
+                shiny::actionButton(
+                  ns("btn_approve_security"),
+                  "Approve Security",
+                  class = "btn-success btn-sm",
+                  icon = shiny::icon("check")
+                )
+              } else if (app$security_signoff) {
+                shiny::div(
+                  class = "small text-success",
+                  "Approved by: ", app$security_signoff_by %||% "System"
+                )
               }
             )
           )

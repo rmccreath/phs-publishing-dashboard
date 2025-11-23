@@ -287,32 +287,50 @@ MockDashboardRepository <- R6::R6Class(
     },
 
     get_by_id = function(dashboard_id) {
-      dplyr::filter(private$data, dashboard_id == !!dashboard_id)
+      # Handle both product_id and dashboard_id
+      result <- dplyr::filter(private$data, dashboard_id == !!dashboard_id | product_id == !!dashboard_id)
+
+      # Return first row if multiple matches, or empty tibble with structure if no matches
+      if (nrow(result) > 0) {
+        result <- result[1, ]
+      }
+
+      result
     },
 
     create = function(dashboard_data) {
-      new_id <- paste0("demo-", nrow(private$data) + 1)
+      new_id <- paste0("prod-", nrow(private$data) + 1)
 
       new_row <- tibble::tibble(
-        dashboard_id = new_id,
+        product_id = new_id,
+        dashboard_id = new_id,  # Alias for compatibility
         external_id = dashboard_data$external_id %||% new_id,
         name = dashboard_data$name,
         description = dashboard_data$description %||% "",
-        url = dashboard_data$url,
-        platform = dashboard_data$platform,
-        type = dashboard_data$type %||% "shiny",
-        owner_id = dashboard_data$owner_id,
-        owner_name = "Demo User",
-        owner_email = "demo@phs.scot",
-        team = dashboard_data$team,
-        department = dashboard_data$department,
-        status = dashboard_data$status %||% "draft",
+        type = dashboard_data$type %||% "shiny_dashboard",
+        department = dashboard_data$department %||% "Not specified",
+        team = dashboard_data$team %||% "Not specified",
+
+        # New workflow fields
+        lifecycle_stage = dashboard_data$lifecycle_stage %||% "approved",
+        current_status = dashboard_data$current_status %||% "awaiting_development",
+
+        # User/ownership
+        created_by = dashboard_data$created_by %||% "demo.user",
+        owner_id = dashboard_data$owner_id %||% "user-1",
+        owner_name = dashboard_data$owner_name %||% "Demo User",
+        owner_email = dashboard_data$owner_email %||% "demo@phs.scot",
+
+        # Legacy fields
+        url = dashboard_data$url %||% NA_character_,
+        platform = dashboard_data$platform %||% "posit_connect",
+        status = dashboard_data$current_status %||% dashboard_data$status %||% "awaiting_development",
         visibility = dashboard_data$visibility %||% "internal",
-        deployment_date = as.POSIXct(Sys.time()),
+        deployment_date = as.POSIXct(NA),
         last_updated = as.POSIXct(Sys.time()),
-        update_frequency = NA_character_,
-        repository_url = dashboard_data$repository_url,
-        documentation_url = dashboard_data$documentation_url,
+        update_frequency = dashboard_data$update_frequency %||% NA_character_,
+        repository_url = dashboard_data$repository_url %||% NA_character_,
+        documentation_url = dashboard_data$documentation_url %||% NA_character_,
         tags = I(list(dashboard_data$tags %||% character())),
         keywords = I(list(character())),
         metadata = I(list(list())),
