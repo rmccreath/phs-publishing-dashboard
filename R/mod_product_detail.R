@@ -667,13 +667,43 @@ mod_product_detail_server <- function(id, product_repo, approval_repo, audit_rep
       )
     })
 
-    # Audit content (placeholder)
+    # Audit content - use audit checklist module
     output$audit_content <- renderUI({
-      shiny::div(
-        class = "alert alert-info",
-        "Audit functionality will be implemented in Phase 2."
-      )
+      prod <- product()
+
+      if (is.null(prod) || nrow(prod) == 0) {
+        return(shiny::div(
+          class = "alert alert-warning",
+          "Product data not loaded"
+        ))
+      }
+
+      # Check if product is in audit stage
+      stage <- prod$lifecycle_stage[1]
+
+      if (stage != "in_audit") {
+        return(shiny::div(
+          class = "alert alert-info",
+          shiny::icon("info-circle"),
+          sprintf(" This product is currently in '%s' stage. Audit review is available when the product reaches 'In Audit' stage.",
+                 tools::toTitleCase(gsub("_", " ", stage)))
+        ))
+      }
+
+      # Render audit checklist module UI
+      mod_audit_checklist_ui(ns("audit_checklist"))
     })
+
+    # Initialize audit checklist module server
+    if (!is.null(audit_repo)) {
+      mod_audit_checklist_server(
+        "audit_checklist",
+        product_id = product_id,
+        product = product,
+        audit_repo = audit_repo,
+        user = user
+      )
+    }
 
     # Deployment content (placeholder)
     output$deployment_content <- renderUI({

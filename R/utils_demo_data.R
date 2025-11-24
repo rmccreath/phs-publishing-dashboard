@@ -644,31 +644,261 @@ MockApprovalRepository <- R6::R6Class(
   )
 )
 
-#' Mock Compliance Repository for Demo Mode
+#' Mock Audit Repository for Demo Mode
 #'
 #' @export
-MockComplianceRepository <- R6::R6Class(
-  "MockComplianceRepository",
+MockAuditRepository <- R6::R6Class(
+  "MockAuditRepository",
   private = list(
-    data = NULL
+    data = NULL,
+
+    # Generate default audit checklist items
+    create_checklist_items = function() {
+      list(
+        # Documentation
+        list(
+          id = "doc_readme",
+          category = "Documentation",
+          description = "README file with clear instructions",
+          guidance = "Includes purpose, installation, usage, and support contact",
+          status = "pending",
+          checked_by = NULL,
+          checked_at = as.POSIXct(NA)
+        ),
+        list(
+          id = "doc_user_guide",
+          category = "Documentation",
+          description = "User guide or help documentation",
+          guidance = "End-user documentation accessible from the product",
+          status = "pending",
+          checked_by = NULL,
+          checked_at = as.POSIXct(NA)
+        ),
+        list(
+          id = "doc_technical",
+          category = "Documentation",
+          description = "Technical documentation for maintainers",
+          guidance = "Architecture, dependencies, deployment process",
+          status = "pending",
+          checked_by = NULL,
+          checked_at = as.POSIXct(NA)
+        ),
+
+        # Code Quality
+        list(
+          id = "code_review",
+          category = "Code Quality",
+          description = "Code review completed",
+          guidance = "At least one other developer has reviewed the code",
+          status = "pending",
+          checked_by = NULL,
+          checked_at = as.POSIXct(NA)
+        ),
+        list(
+          id = "code_tests",
+          category = "Code Quality",
+          description = "Automated tests passing",
+          guidance = "Unit tests, integration tests where applicable",
+          status = "pending",
+          checked_by = NULL,
+          checked_at = as.POSIXct(NA)
+        ),
+        list(
+          id = "code_linting",
+          category = "Code Quality",
+          description = "Code linting/style checks passing",
+          guidance = "Follows PHS coding standards",
+          status = "pending",
+          checked_by = NULL,
+          checked_at = as.POSIXct(NA)
+        ),
+
+        # Security
+        list(
+          id = "sec_scan",
+          category = "Security",
+          description = "Vulnerability scan completed",
+          guidance = "No high or critical vulnerabilities",
+          status = "pending",
+          checked_by = NULL,
+          checked_at = as.POSIXct(NA)
+        ),
+        list(
+          id = "sec_data",
+          category = "Security",
+          description = "Data protection measures in place",
+          guidance = "Encryption, access controls, data minimization",
+          status = "pending",
+          checked_by = NULL,
+          checked_at = as.POSIXct(NA)
+        ),
+        list(
+          id = "sec_auth",
+          category = "Security",
+          description = "Authentication & authorization configured",
+          guidance = "Appropriate user access controls implemented",
+          status = "pending",
+          checked_by = NULL,
+          checked_at = as.POSIXct(NA)
+        ),
+
+        # Accessibility
+        list(
+          id = "access_wcag",
+          category = "Accessibility",
+          description = "WCAG 2.1 AA compliance checked",
+          guidance = "Automated accessibility testing passed",
+          status = "pending",
+          checked_by = NULL,
+          checked_at = as.POSIXct(NA)
+        ),
+        list(
+          id = "access_keyboard",
+          category = "Accessibility",
+          description = "Keyboard navigation tested",
+          guidance = "All functionality accessible via keyboard",
+          status = "pending",
+          checked_by = NULL,
+          checked_at = as.POSIXct(NA)
+        ),
+
+        # Performance
+        list(
+          id = "perf_load",
+          category = "Performance",
+          description = "Load testing completed",
+          guidance = "Handles expected user load",
+          status = "pending",
+          checked_by = NULL,
+          checked_at = as.POSIXct(NA)
+        ),
+        list(
+          id = "perf_optimize",
+          category = "Performance",
+          description = "Performance optimization applied",
+          guidance = "Page load times, query optimization",
+          status = "pending",
+          checked_by = NULL,
+          checked_at = as.POSIXct(NA)
+        ),
+
+        # Deployment
+        list(
+          id = "deploy_config",
+          category = "Deployment Readiness",
+          description = "Production configuration verified",
+          guidance = "Environment variables, secrets management",
+          status = "pending",
+          checked_by = NULL,
+          checked_at = as.POSIXct(NA)
+        ),
+        list(
+          id = "deploy_monitor",
+          category = "Deployment Readiness",
+          description = "Monitoring & logging configured",
+          guidance = "Error tracking, performance monitoring set up",
+          status = "pending",
+          checked_by = NULL,
+          checked_at = as.POSIXct(NA)
+        ),
+        list(
+          id = "deploy_rollback",
+          category = "Deployment Readiness",
+          description = "Rollback plan documented",
+          guidance = "Clear procedure for reverting deployment if needed",
+          status = "pending",
+          checked_by = NULL,
+          checked_at = as.POSIXct(NA)
+        )
+      )
+    }
   ),
 
   public = list(
     initialize = function() {
-      private$data <- tibble::tibble()
+      private$data <- tibble::tibble(
+        audit_id = character(),
+        product_id = character(),
+        status = character(),
+        started_at = .POSIXct(numeric()),
+        started_by = character(),
+        completed_at = .POSIXct(numeric()),
+        checklist_items = list(),
+        created_at = .POSIXct(numeric()),
+        updated_at = .POSIXct(numeric())
+      )
     },
 
-    get_latest = function(dashboard_id) {
-      tibble::tibble()
+    get_by_product_id = function(product_id) {
+      prod_id_value <- product_id
+      result <- dplyr::filter(private$data, .data$product_id == prod_id_value)
+
+      if (nrow(result) > 0) {
+        return(result[1, ])
+      }
+      NULL
     },
 
-    get_history = function(dashboard_id, limit = 10) {
-      tibble::tibble()
+    create = function(product_id, started_by = "System User") {
+      new_id <- paste0("audit-", nrow(private$data) + 1)
+      current_time <- Sys.time()
+
+      new_row <- tibble::tibble(
+        audit_id = new_id,
+        product_id = product_id,
+        status = "in_progress",
+        started_at = current_time,
+        started_by = started_by,
+        completed_at = as.POSIXct(NA),
+        checklist_items = I(list(private$create_checklist_items())),
+        created_at = current_time,
+        updated_at = current_time
+      )
+
+      private$data <- dplyr::bind_rows(private$data, new_row)
+      message("Demo mode: Audit created for product ", product_id)
+      new_id
     },
 
-    create = function(check_data) {
-      message("Demo mode: Compliance check logged")
-      paste0("check-", nrow(private$data) + 1)
+    check_item = function(product_id, item_id, checked_by) {
+      prod_id_value <- product_id
+      row_idx <- which(private$data$product_id == prod_id_value)
+
+      if (length(row_idx) == 0) {
+        warning("No audit found for product: ", product_id)
+        return(list(success = FALSE, all_complete = FALSE))
+      }
+
+      # Get checklist items
+      items <- private$data$checklist_items[[row_idx[1]]]
+
+      # Find and update the specific item
+      item_idx <- which(sapply(items, function(x) x$id == item_id))
+
+      if (length(item_idx) == 0) {
+        warning("Item not found: ", item_id)
+        return(list(success = FALSE, all_complete = FALSE))
+      }
+
+      # Update item status
+      items[[item_idx[1]]]$status <- "completed"
+      items[[item_idx[1]]]$checked_by <- checked_by
+      items[[item_idx[1]]]$checked_at <- Sys.time()
+
+      # Update checklist in data
+      private$data$checklist_items[[row_idx[1]]] <- items
+      private$data$updated_at[row_idx[1]] <- Sys.time()
+
+      # Check if all items are complete
+      all_complete <- all(sapply(items, function(x) x$status == "completed"))
+
+      if (all_complete) {
+        private$data$status[row_idx[1]] <- "completed"
+        private$data$completed_at[row_idx[1]] <- Sys.time()
+        message("All audit items complete for product: ", product_id)
+      }
+
+      list(success = TRUE, all_complete = all_complete)
     }
   )
 )

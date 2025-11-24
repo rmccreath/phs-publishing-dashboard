@@ -87,15 +87,17 @@ app_server <- function(input, output, session) {
     NULL
   }
 
-  compliance_repo <- if (demo_mode) {
+  audit_repo <- if (demo_mode) {
     tryCatch({
-      MockComplianceRepository$new()
+      repo <- MockAuditRepository$new()
+      log_message("Created MockAuditRepository", "INFO")
+      repo
     }, error = function(e) {
-      log_message(paste("Error creating MockComplianceRepository:", e$message), "ERROR")
+      log_message(paste("Error creating MockAuditRepository:", e$message), "ERROR")
       NULL
     })
   } else if (!is.null(pool)) {
-    ComplianceRepository$new(pool)
+    AuditRepository$new(pool)
   } else {
     NULL
   }
@@ -212,7 +214,7 @@ app_server <- function(input, output, session) {
       "product_detail",
       product_repo = dashboard_repo,
       approval_repo = approval_repo,
-      audit_repo = NULL,  # Phase 2
+      audit_repo = audit_repo,
       user = current_user
     )
 
