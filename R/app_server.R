@@ -162,12 +162,12 @@ app_server <- function(input, output, session) {
     }
   )
 
-  # Initialize compliance service
-  compliance_service <- if (!is.null(github_service)) {
-    ComplianceService$new(github_service)
-  } else {
-    NULL
-  }
+  # Initialize compliance service (old, replaced by audit module in Phase 2)
+  # compliance_service <- if (!is.null(github_service)) {
+  #   ComplianceService$new(github_service)
+  # } else {
+  #   NULL
+  # }
 
   # Show appropriate notification based on mode
   if (demo_mode) {
@@ -251,16 +251,16 @@ app_server <- function(input, output, session) {
       user = current_user
     )
 
-    # Compliance Tracker Module (old, to be integrated into audit later)
-    if (!is.null(compliance_repo) && !is.null(compliance_service)) {
-      mod_compliance_tracker_server(
-        "compliance",
-        compliance_repo = compliance_repo,
-        dashboard_repo = dashboard_repo,
-        compliance_service = compliance_service,
-        user = current_user
-      )
-    }
+    # Compliance Tracker Module (old, replaced by audit module in Phase 2)
+    # if (!is.null(compliance_repo) && !is.null(compliance_service)) {
+    #   mod_compliance_tracker_server(
+    #     "compliance",
+    #     compliance_repo = compliance_repo,
+    #     dashboard_repo = dashboard_repo,
+    #     compliance_service = compliance_service,
+    #     user = current_user
+    #   )
+    # }
   }
 
   # Cleanup on session end
